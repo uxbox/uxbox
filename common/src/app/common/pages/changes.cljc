@@ -416,6 +416,9 @@
         root-name? (and (= group :name-group)
                         (:component-root? shape))]
 
+    ;; (js/console.log "**********shape" (:name shape))
+    ;; (js/console.log "attr" (clj->js attr))
+    ;; (js/console.log "ignore-geometry" (clj->js ignore-geometry))
     (cond-> shape
       (and shape-ref group (not ignore) (not= val (get shape attr))
            (not root-name?)

@@ -364,13 +364,19 @@
        shape))))
 
 
+(defn spy [msg x] (js/console.log msg (clj->js x)) x)
 (defn calc-child-modifiers
-  [parent transformed-parent child parent-modifiers]
-  (let [parent-rect             (:selrect parent)
-        transformed-parent-rect (:selrect transformed-parent)
-        child-rect              (:selrect child)
+  [parent resized-parent child parent-modifiers]
+  (let [parent-rect         (:selrect parent)
+        resized-parent-rect (:selrect resized-parent)
+        child-rect          (:selrect child)
 
-        origin (:resize-origin parent-modifiers)
+        resize-transform (get parent-modifiers :resize-transform (gmt/matrix))
+        resize-transform-inverse (get parent-modifiers :resize-transform-inverse (gmt/matrix))
+
+        parent-center (gco/center-shape parent)
+        origin (-> (:resize-origin parent-modifiers)
+                   ((d/nilf transform-point-center) parent-center resize-transform-inverse))
 
         orig-h (when origin
                  (cond
@@ -401,6 +407,17 @@
                         (- (:y1 transformed-parent-rect) (:y1 parent-rect))
 
                         :else 0))
+        _ (js/console.log "xxxxxxxxxxxxxxxxxxxxxx")
+        _ (js/console.log "SHAPE" (:name child))
+        _ (js/console.log "parent-modifiers" (clj->js parent-modifiers))
+        _ (js/console.log "parent-rect" (clj->js parent-rect))
+        _ (js/console.log "transformed-parent-rect" (clj->js transformed-parent-rect))
+        _ (js/console.log "child-rect" (clj->js child-rect))
+        _ (js/console.log "origin" (clj->js origin))
+        _ (js/console.log "orig-h" (clj->js orig-h))
+        _ (js/console.log "delta-h" (clj->js delta-h))
+        _ (js/console.log "orig-v" (clj->js orig-v))
+        _ (js/console.log "delta-v" (clj->js delta-v))
 
         constraints-h (get child :constraints-h (spec/default-constraints-h child))
         constraints-v (get child :constraints-v (spec/default-constraints-v child))
@@ -408,12 +425,14 @@
         modifiers-h (case constraints-h
                       :left
                       (if (= orig-h :right)
-                        {:displacement (gpt/point delta-h 0)} ;; we convert to matrix below
+                        {:displacement (-> (gpt/point delta-h 0) ;; we convert to matrix below
+                                           (gpt/transform resize-transform))}
                         {})
 
                       :right
                       (if (= orig-h :left)
-                        {:displacement (gpt/point delta-h 0)}
+                        {:displacement (-> (gpt/point delta-h 0)
+                                           (gpt/transform resize-transform))}
                         {})
 
                       :leftright
@@ -478,12 +497,16 @@
                         {})
 
                       {})]
+    (js/console.log "modifiers-h" (clj->js modifiers-h))
+    (js/console.log "modifiers-v" (clj->js modifiers-v))
 
-    (cond-> {}
+    (spy "result" (cond-> {}
       (or (:displacement modifiers-h) (:displacement modifiers-v))
       (assoc :displacement (gmt/translate-matrix
-                             (gpt/point (get (:displacement modifiers-h) :x 0)
-                                        (get (:displacement modifiers-v) :y 0))))
+                             (gpt/point (+ (get (:displacement modifiers-h) :x 0)
+                                           (get (:displacement modifiers-v) :x 0))
+                                        (+ (get (:displacement modifiers-h) :y 0)
+                                           (get (:displacement modifiers-v) :y 0)))))
 
       (or (:resize-vector modifiers-h) (:resize-vector modifiers-v))
       (assoc :resize-origin (or (:resize-origin modifiers-h)  ;; we assume that the origin is the same
@@ -493,7 +516,7 @@
       (:displacement parent-modifiers)
       (update :displacement #(if (nil? %)
                                (:displacement parent-modifiers)
-                               (gmt/add-translate % (:displacement parent-modifiers)))))))
+                               (gmt/add-translate % (:displacement parent-modifiers))))))))
 
 (defn update-group-viewbox
   "Updates the viewbox for groups imported from SVG's"
