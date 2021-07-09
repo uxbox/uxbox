@@ -175,6 +175,7 @@
                      'app.rpc.mutations.management
                      'app.rpc.mutations.ldap
                      'app.rpc.mutations.fonts
+                     'app.rpc.mutations.share-link
                      'app.rpc.mutations.verify-token)
          (map (partial process-method cfg))
          (into {}))))
