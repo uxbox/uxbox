@@ -267,12 +267,27 @@
   (instance? PGpoint v))
 
 (defn pgarray?
-  [v]
-  (instance? PgArray v))
+  ([v] (instance? PgArray v))
+  ([v type]
+   (and (instance? PgArray v)
+        (= type (.getBaseTypeName ^PgArray v)))))
 
 (defn pgarray-of-uuid?
   [v]
   (and (pgarray? v) (= "uuid" (.getBaseTypeName ^PgArray v))))
+
+(defn decode-pgarray
+  ([v] (into [] (.getArray ^PgArray v)))
+  ([v in] (into in (.getArray ^PgArray v)))
+  ([v in xf] (into in xf (.getArray ^PgArray v))))
+
+(defn pgarray->set
+  [v]
+  (set (.getArray ^PgArray v)))
+
+(defn pgarray->vector
+  [v]
+  (vec (.getArray ^PgArray v)))
 
 (defn pgpoint
   [p]
@@ -368,15 +383,6 @@
   (doto (org.postgresql.util.PGobject.)
     (.setType "jsonb")
     (.setValue (json/encode-str data))))
-
-(defn pgarray->set
-  [v]
-  (set (.getArray ^PgArray v)))
-
-(defn pgarray->vector
-  [v]
-  (vec (.getArray ^PgArray v)))
-
 
 ;; --- Locks
 

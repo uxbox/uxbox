@@ -19,16 +19,9 @@
 (declare check-shared-token!)
 (declare retrieve-shared-token)
 
-(def ^:private
-  sql:project
-  "select p.id, p.name, p.team_id
-     from project as p
-    where p.id = ?
-      and p.deleted_at is null")
-
 (defn- retrieve-project
   [conn id]
-  (db/exec-one! conn [sql:project id]))
+  (db/get-by-id conn :project id {:columns [:id :name :team-id]}))
 
 (s/def ::id ::us/uuid)
 (s/def ::file-id ::us/uuid)
@@ -82,5 +75,70 @@
   (let [sql "select * from file_share_token where file_id=? and page_id=?"]
     (db/exec-one! conn [sql file-id page-id])))
 
+;; --- Query: View Only Bundle
 
+(defn- decode-share-link-row
+  [row]
+  (-> row
+      (update :flags (fn [flags]
+                       (if (db/pgarray? flags "text")
+                         (db/decode-pgarray flags #{} (map keyword))
+                         #{})))
+      (update :pages (fn [pages]
+                       (if (db/pgarray? pages "uuid")
+                         (db/decode-pgarray pages #{})
+                         #{})))))
 
+(defn- retrieve-share-link
+  [conn id]
+  (-> (db/get-by-id conn :share-link id)
+      (decode-share-link-row)))
+
+(defn- retrieve-bundle
+  [{:keys [conn] :as cfg} file-id]
+  (let [file    (files/retrieve-file cfg file-id)
+        project (retrieve-project conn (:project-id file))
+        libs    (files/retrieve-file-libraries cfg false file-id)
+        users   (teams/retrieve-users conn (:team-id project))
+        links   (->> (db/query conn :share-link {:file-id file-id})
+                     (mapv decode-share-link-row))
+        fonts   (db/query conn :team-font-variant
+                          {:team-id (:team-id project)
+                           :deleted-at nil})]
+    {:file file
+     :users users
+     :fonts fonts
+     :share-links links
+     :project project
+     :libraries libs}))
+
+(defn- filter-bundle-by-share-link
+  "Transforms the bundle data structure to adapt it to a shared-link
+  props."
+  [conn share-id bundle]
+  (let [ldata  (retrieve-share-link conn share-id)
+        bundle (-> bundle
+                   (assoc :share ldata)
+                   (dissoc :share-links))]
+
+    (cond-> bundle
+      ;; If we have pages, this means that link restricts to see only
+      ;; a limited subset of pages, in this cas we need to filter the
+      ;; file and exclude not shared pages.
+      (seq (:pages ldata))
+      (update-in [:file :data] (fn [data]
+                                 (let [allowed-pages (:pages ldata)]
+                                   (-> data
+                                       (update :pages (fn [pages] (filterv #(contains? allowed-pages %) pages)))
+                                       (update :pages-index (fn [index] (select-keys index allowed-pages))))))))))
+
+(s/def ::view-only-bundle
+  (s/keys :req-un [::file-id] :opt-un [::profile-id ::share-id]))
+
+(sv/defmethod ::view-only-bundle {:auth false}
+  [{:keys [pool] :as cfg} {:keys [profile-id file-id share-id] :as params}]
+  (db/with-atomic [conn pool]
+    (let [cfg (assoc cfg :conn conn)]
+      (cond->> (retrieve-bundle cfg file-id)
+        (uuid? share-id)
+        (filter-bundle-by-share-link conn share-id)))))
