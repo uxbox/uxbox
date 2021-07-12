@@ -1560,7 +1560,7 @@ msgid "viewer.header.show-interactions"
 msgstr "Etkileşimleri göster"
 
 #: src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs
-msgid "viewer.header.share.title"
+msgid "labels.share-prototype"
 msgstr "Bağlantıyı paylaş"
 
 #: src/app/main/ui/viewer/header.cljs

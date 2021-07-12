@@ -131,6 +131,24 @@
   }
 }
 
+.btn-text-dark {
+  @extend %btn;
+  background: $color-gray-60;
+  color: $color-gray-20;
+
+  svg {
+    fill: $color-gray-20;
+  }
+  &:hover {
+    background: $color-primary;
+    color: $color-gray-60;
+    svg {
+      fill: $color-gray-60;
+    }
+  }
+}
+
+
 .btn-gray {
   @extend %btn;
   background: $color-gray-30;

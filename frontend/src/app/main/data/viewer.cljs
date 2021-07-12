@@ -79,6 +79,35 @@
       (rx/of (fetch-bundle params)
              (fetch-comment-threads params)))))
 
+;; --- Select Page
+
+(defn- extract-frames
+  [objects]
+  (let [root (get objects uuid/zero)]
+    (into [] (comp (map #(get objects %))
+                   (filter #(= :frame (:type %))))
+          (reverse (:shapes root)))))
+
+(defn select-page
+  [page-id]
+  (ptk/reify ::select-page
+    ptk/UpdateEvent
+    (update [_ state]
+      state)))
+
+      ;; (let [page    (get-in state [:viewer-data :pages-index page-id])
+      ;;       objects (:objects page)
+      ;;       frames  (extract-frames objects)]
+
+      ;;   (update state :viewer-local
+      ;;           assoc :view
+
+      ;;   (-> state
+      ;;       (update :viewer-data assoc
+      ;;               :objects objects
+      ;;               :page page
+      ;;               :frames frames))))))
+
 ;; --- Data Fetching
 
 (s/def ::fetch-bundle-params
@@ -91,41 +120,28 @@
   (ptk/reify ::fetch-file
     ptk/WatchEvent
     (watch [_ _ _]
-      (let [params (cond-> {:page-id page-id
-                            :file-id file-id}
-                     (string? token) (assoc :token token))]
-        (->> (rp/query :viewer-bundle params)
+      (let [params' (cond-> {:file-id file-id}
+                      (string? token) (assoc :token token))]
+        (->> (rp/query :view-only-bundle params')
              (rx/mapcat
               (fn [{:keys [fonts] :as bundle}]
                 (rx/of (df/fonts-fetched fonts)
-                       (bundle-fetched bundle)))))))))
-
-(defn- extract-frames
-  [objects]
-  (let [root (get objects uuid/zero)]
-    (into [] (comp (map #(get objects %))
-                   (filter #(= :frame (:type %))))
-          (reverse (:shapes root)))))
+                       (bundle-fetched (merge bundle params))
+                       (select-page page-id)))))))))
 
 (defn bundle-fetched
-  [{:keys [project file page share-token token libraries users] :as bundle}]
-  (us/verify ::bundle bundle)
+  [{:keys [project file share-links libraries users data] :as bundle}]
+  ;; (us/verify ::bundle bundle)
   (ptk/reify ::bundle-fetched
     ptk/UpdateEvent
     (update [_ state]
-      (let [objects (:objects page)
-            frames  (extract-frames objects)]
-        (-> state
-            (assoc :viewer-libraries (d/index-by :id libraries))
-            (update :viewer-data assoc
-                    :project project
-                    :objects objects
-                    :users (d/index-by :id users)
-                    :file file
-                    :page page
-                    :frames frames
-                    :token token
-                    :share-token share-token))))))
+      (-> state
+          (assoc :viewer-libraries (d/index-by :id libraries))
+          (assoc :viewer-share-links share-links)
+          (assoc :viewer-project project)
+          (assoc :viewer-file file)
+          (assoc :viewer-data data)
+          (assoc :viewer-users (d/index-by :id users))))))
 
 (defn fetch-comment-threads
   [{:keys [file-id page-id] :as params}]
@@ -411,6 +427,7 @@
     (update [_ state]
       (assoc-in state [:viewer-local :hover] (when hover? id)))))
 
+;; --- NAV
 
 (defn go-to-dashboard
   ([] (go-to-dashboard nil))
@@ -420,3 +437,14 @@
      (watch [_ state _]
        (let [team-id (or team-id (get-in state [:viewer-data :project :team-id]))]
          (rx/of (rt/nav :dashboard-projects {:team-id team-id})))))))
+
+(defn go-to-page
+  [page-id]
+  (ptk/reify ::go-to-page
+    ptk/WatchEvent
+     (watch [_ state _]
+       (let [route   (:route state)
+             qparams (assoc (:query-params route) :index 0)
+             pparams (assoc (:path-params route) :page-id page-id)
+             rname   (get-in route [:data :name])]
+         (rx/of (rt/nav rname pparams qparams))))))

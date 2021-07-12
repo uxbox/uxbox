@@ -42,56 +42,61 @@
     }
   }
 
-  .view-options {
-    .icon {
-      align-items: center;
-      cursor: pointer;
-      display: flex;
-      justify-content: center;
+  .options-zone {
+    align-items: center;
+    display: flex;
+    // width: 384px;
+    justify-content: flex-end;
+    position: relative;
 
-      svg {
-        fill: $color-gray-30;
-        height: 30px;
-        width: 28px;
-      }
+    > * {
+      margin-left: $big;
+    }
 
-      &:hover {
-        > svg {
-          fill: $color-primary;
-        }
+    .btn-primary {
+      flex-shrink: 0;
+    }
+
+    .zoom-widget {
+      .dropdown {
+        top: 45px;
       }
     }
 
-    .dropdown {
-      min-width: 260px;
-      left: 0px;
-      top: 40px;
-    }
-
-    .view-options-dropdown {
+    .view-options {
       align-items: center;
       cursor: pointer;
       display: flex;
 
-      span {
+      > span {
         color: $color-gray-10;
         font-size: $fs13;
         margin-right: $x-small;
       }
 
-      svg {
-        fill: $color-gray-10;
-        height: 12px;
-        width: 12px;
-      }
-    }
-  }
+      > .icon {
+        align-items: center;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
 
-  .file-menu {
-    .dropdown {
-      min-width: 100px;
-      right: 0px;
-      top: 40px;
+        svg {
+          fill: $color-gray-10;
+          height: 12px;
+          width: 12px;
+        }
+
+        &:hover {
+          > svg {
+            fill: $color-primary;
+          }
+        }
+      }
+
+      .dropdown {
+        min-width: 260px;
+        top: 45px;
+      }
     }
   }
 
@@ -100,39 +105,44 @@
     cursor: pointer;
     display: flex;
     padding: $x-small;
+    position: relative;
 
-    svg {
-      fill: $color-gray-20;
-      height: 20px;
-      margin-right: $small;
-      width: 20px;
-    }
+    .icon {
+      display: flex;
+      justify-content: center;
+      align-items: center;
 
-    span {
-      color: $color-gray-20;
-      margin-right: $x-small;
-      font-size: $fs14;
-      overflow-x: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-
-      &.frame-name {
-        color: $color-white;
+      svg {
+        fill: $color-gray-20;
+        height: 12px;
+        margin-right: $small;
+        width: 12px;
       }
     }
 
-    .show-thumbnails-button svg {
-      fill: $color-white;
-      height: 10px;
-      width: 10px;
+    .breadcrumb {
+      display: flex;
+
+      > span {
+        color: $color-gray-20;
+        margin-right: $x-small;
+        font-size: $fs14;
+        overflow-x: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      > .dropdown {
+        top: 45px;
+      }
     }
 
-    .page-name {
-      color: $color-white;
-    }
-
-    .counters {
-      margin-left: $size-3;
+    .current-frame {
+      display: flex;
+      span {
+        color: $color-white;
+        margin-right: $x-small;
+      }
     }
   }
 
@@ -164,133 +174,6 @@
         }
       }
     }
-  }
-
-  .options-zone {
-    align-items: center;
-    display: flex;
-    width: 384px;
-    justify-content: flex-end;
-    position: relative;
-
-    > * {
-      margin-left: $big;
-    }
-
-    .btn-share {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 25px;
-      height: 25px;
-      cursor: pointer;
-
-      svg {
-        fill: $color-gray-20;
-        width: 20px;
-        height: 20px;
-      }
-    }
-
-    .btn-primary {
-      flex-shrink: 0;
-    }
-  }
-
-  .share-link-dropdown {
-    background-color: $color-white;
-    border-radius: $br-small;
-    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.25);
-    display: flex;
-    flex-direction: column;
-    left: -135px;
-    position: absolute;
-    padding: 1rem;
-    top: 45px;
-    width: 400px;
-
-    .share-link-title {
-      color: $color-black;
-      font-size: $fs15;
-      padding-bottom: 1rem;
-    }
-
-    .share-link-subtitle {
-      color: $color-gray-40;
-      padding-bottom: 1rem;
-    }
-
-    .share-link-buttons {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-
-      .btn-warning,
-      .btn-primary {
-        width: 50%;
-      }
-
-    }
-
-    .share-link-input {
-      border: 1px solid $color-gray-20;
-      border-radius: 3px;
-      display: flex;
-      height: 40px;
-      justify-content: space-between;
-      margin-bottom: 1rem;
-      padding: 9px $small;
-      overflow: hidden;
-
-      .link {
-        &:before {
-          content: '';
-          position: absolute;
-          width: 50%;
-          background: linear-gradient(45deg, transparent, #ffffff);
-          height: 100%;
-          top: 0;
-          left: 0;
-          pointer-events: none;
-          margin-left: 50%;
-        }
-        overflow: hidden;
-        white-space: nowrap;
-        position: relative;
-        color: $color-gray-50;
-        line-height: 1.5;
-        user-select: all;
-        overflow: hidden;
-      }
-
-      .link-button {
-        color: $color-primary-dark;
-        cursor: pointer;
-        flex-shrink: 0;
-        font-size: $fs15;
-
-        &:hover {
-          color: $color-black;
-        }
-      }
-    }
-
-    &:before {
-      background-color: $color-white;
-      content: "";
-      height: 16px;
-      left: 53%;
-      position: absolute;
-      transform: rotate(45deg);
-      top: -5px;
-      width: 16px;
-    }
-
-  }
-
-  .zoom-dropdown {
-    left: 180px;
-    top: 40px;
   }
 
   .users-zone {

@@ -1465,7 +1465,7 @@ msgid "viewer.header.share.subtitle"
 msgstr "Prin acest link se permite accesul public"
 
 #: src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs
-msgid "viewer.header.share.title"
+msgid "labels.share-prototype"
 msgstr "Distribuie link"
 
 #: src/app/main/ui/viewer/header.cljs

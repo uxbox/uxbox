@@ -41,12 +41,13 @@
 
 (s/def ::page-id ::us/uuid)
 (s/def ::file-id ::us/uuid)
-(s/def ::viewer-path-params
-  (s/keys :req-un [::file-id ::page-id]))
-
 (s/def ::section ::us/keyword)
 (s/def ::index ::us/integer)
-(s/def ::token (s/nilable ::us/string))
+(s/def ::token (s/nilable ::us/not-empty-string))
+
+(s/def ::viewer-path-params
+  (s/keys :req-un [::file-id]
+          :opt-un [::page-id]))
 
 (s/def ::viewer-query-params
   (s/keys :req-un [::index]

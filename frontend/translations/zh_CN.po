@@ -1223,7 +1223,7 @@ msgid "viewer.header.share.subtitle"
 msgstr "任何人都可以通过本链接访问"
 
 #: src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs
-msgid "viewer.header.share.title"
+msgid "labels.share-prototype"
 msgstr "分享链接"
 
 #: src/app/main/ui/viewer/header.cljs

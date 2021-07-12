@@ -1280,7 +1280,7 @@ msgid "viewer.header.share.subtitle"
 msgstr "Όποιος έχει τον link θα έχει πρόσβαση"
 
 #: src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs
-msgid "viewer.header.share.title"
+msgid "labels.share-prototype"
 msgstr "Μοιραστείτε το link"
 
 #: src/app/main/ui/viewer/header.cljs

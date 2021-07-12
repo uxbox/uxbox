@@ -1330,7 +1330,7 @@ msgid "viewer.header.share.subtitle"
 msgstr "Jeder mit dem Link hat Zugriff"
 
 #: src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs
-msgid "viewer.header.share.title"
+msgid "labels.share-prototype"
 msgstr "Prototyp teilen"
 
 #: src/app/main/ui/viewer/header.cljs

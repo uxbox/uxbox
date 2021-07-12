@@ -1226,7 +1226,7 @@ msgid "viewer.header.share.subtitle"
 msgstr "Toute personne disposant du lien aura accès"
 
 #: src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs
-msgid "viewer.header.share.title"
+msgid "labels.share-prototype"
 msgstr "Partager le prototype"
 
 #: src/app/main/ui/viewer/header.cljs

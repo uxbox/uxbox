@@ -64,15 +64,16 @@
            on-decrease
            on-zoom-reset
            on-zoom-fit
-           on-zoom-selected]
+           on-zoom-selected
+           on-fullscreen]
     :as props}]
   (let [show-dropdown? (mf/use-state false)]
     [:div.zoom-widget {:on-click #(reset! show-dropdown? true)}
-     [:span {} (str (mth/round (* 100 zoom)) "%")]
-     [:span.dropdown-button i/arrow-down]
+     [:span.label {} (str (mth/round (* 100 zoom)) "%")]
+     [:span.icon i/arrow-down]
      [:& dropdown {:show @show-dropdown?
                    :on-close #(reset! show-dropdown? false)}
-      [:ul.zoom-dropdown
+      [:ul.dropdown
        [:li {:on-click on-increase}
         "Zoom in" [:span (sc/get-tooltip :increase-zoom)]]
        [:li {:on-click on-decrease}
@@ -82,7 +83,11 @@
        [:li {:on-click on-zoom-fit}
         "Zoom to fit all" [:span (sc/get-tooltip :fit-all)]]
        [:li {:on-click on-zoom-selected}
-        "Zoom to selected" [:span (sc/get-tooltip :zoom-selected)]]]]]))
+        "Zoom to selected" [:span (sc/get-tooltip :zoom-selected)]]
+       (when on-fullscreen
+         [:li {:on-click on-fullscreen}
+          "Full screen"])]]]))
+
 
 ;; --- Header Users
 

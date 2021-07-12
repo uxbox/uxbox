@@ -599,7 +599,7 @@ msgid "viewer.header.share.subtitle"
 msgstr "Любой, у кого есть ссылка будет иметь доступ"
 
 #: src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs
-msgid "viewer.header.share.title"
+msgid "labels.share-prototype"
 msgstr "Поделиться ссылкой"
 
 #: src/app/main/ui/viewer/header.cljs

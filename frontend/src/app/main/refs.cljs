@@ -286,6 +286,12 @@
 
 ;; ---- Viewer refs
 
+(def viewer-file
+  (l/derived :viewer-file st/state))
+
+(def viewer-project
+  (l/derived :viewer-file st/state))
+
 (def viewer-data
   (l/derived :viewer-data st/state))
 

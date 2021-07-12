@@ -1524,8 +1524,7 @@ msgstr "Artboard not found."
 msgid "viewer.header.dont-show-interactions"
 msgstr "Don't show interactions"
 
-#: src/app/main/ui/viewer/header.cljs
-msgid "viewer.header.edit-file"
+msgid "labels.edit-file"
 msgstr "Edit file"
 
 #: src/app/main/ui/viewer/header.cljs
@@ -1556,8 +1555,7 @@ msgstr "Remove link"
 msgid "viewer.header.share.subtitle"
 msgstr "Anyone with the link will have access"
 
-#: src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs
-msgid "viewer.header.share.title"
+msgid "labels.share-prototype"
 msgstr "Share prototype"
 
 #: src/app/main/ui/viewer/header.cljs

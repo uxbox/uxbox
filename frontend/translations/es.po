@@ -1517,7 +1517,7 @@ msgid "viewer.header.dont-show-interactions"
 msgstr "No mostrar interacciones"
 
 #: src/app/main/ui/viewer/header.cljs
-msgid "viewer.header.edit-file"
+msgid "labels.edit-file"
 msgstr "Editar archivo"
 
 #: src/app/main/ui/viewer/header.cljs
@@ -1549,7 +1549,7 @@ msgid "viewer.header.share.subtitle"
 msgstr "Cualquiera con el enlace podrá acceder"
 
 #: src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs, src/app/main/ui/viewer/header.cljs
-msgid "viewer.header.share.title"
+msgid "labels.share-prototype"
 msgstr "Compartir prototipo"
 
 #: src/app/main/ui/viewer/header.cljs
