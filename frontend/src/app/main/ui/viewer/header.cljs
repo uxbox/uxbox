@@ -17,14 +17,14 @@
    [app.main.store :as st]
    [app.main.ui.components.dropdown :refer [dropdown]]
    [app.main.ui.components.fullscreen :as fs]
+   [app.main.ui.icons :as i]
    [app.main.ui.viewer.comments :refer [comments-menu]]
    [app.main.ui.workspace.header :refer [zoom-widget]]
-   [app.main.ui.icons :as i]
    [app.util.dom :as dom]
    [app.util.i18n :as i18n :refer [tr]]
+   [app.util.object :as obj]
    [app.util.router :as rt]
    [app.util.webapi :as wapi]
-   [app.util.object :as obj]
    [rumext.alpha :as mf]))
 
 ;; (mf/defc share-link
@@ -122,7 +122,7 @@
             (if @fullscreen (fullscreen false) (fullscreen true))))]
 
     [:div.options-zone
-     #_(case section
+     (case section
        :interactions [:& interactions-menu {:local local}]
        :comments [:& comments-menu]
        nil)

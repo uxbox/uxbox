@@ -6,15 +6,13 @@
 
 (ns app.main.ui.viewer
   (:require
-   [app.common.uuid :as uuid]
    [app.common.data :as d]
-   [app.common.spec :as us]
-   [cljs.spec.alpha :as s]
-
    [app.common.geom.matrix :as gmt]
    [app.common.geom.point :as gpt]
    [app.common.geom.shapes :as geom]
    [app.common.pages :as cp]
+   [app.common.spec :as us]
+   [app.common.uuid :as uuid]
    [app.main.data.comments :as dcm]
    [app.main.data.viewer :as dv]
    [app.main.data.viewer.shortcuts :as sc]
@@ -22,15 +20,16 @@
    [app.main.store :as st]
    [app.main.ui.comments :as cmt]
    [app.main.ui.hooks :as hooks]
+   [app.main.ui.viewer.comments :refer [comments-layer]]
    [app.main.ui.viewer.header :refer [header]]
    [app.main.ui.viewer.shapes :as shapes]
    [app.main.ui.viewer.thumbnails :refer [thumbnails-panel]]
-   [app.main.ui.viewer.comments :refer [comments-layer]]
    [app.util.dom :as dom]
    [app.util.i18n :as i18n :refer [tr]]
    [app.util.keyboard :as kbd]
-   [goog.events :as events]
    [app.util.object :as obj]
+   [cljs.spec.alpha :as s]
+   [goog.events :as events]
    [okulary.core :as l]
    [rumext.alpha :as mf]))
 
