@@ -110,12 +110,8 @@
         [:span.label (tr "viewer.header.show-interactions-on-click")]]]]]))
 
 (mf/defc header-options
-  [{:keys [state data section]}]
-  (let [project-id (get-in data [:project :id])
-        file-id    (get-in data [:file :id])
-        page-id    (get-in data [:page :id])
-
-        fullscreen (mf/use-ctx fs/fullscreen-context)
+  [{:keys [section local]}]
+  (let [fullscreen (mf/use-ctx fs/fullscreen-context)
 
         has-permission? true
 
@@ -126,13 +122,13 @@
             (if @fullscreen (fullscreen false) (fullscreen true))))]
 
     [:div.options-zone
-     (case section
-       :interactions [:& interactions-menu {:state state}]
+     #_(case section
+       :interactions [:& interactions-menu {:local local}]
        :comments [:& comments-menu]
        nil)
 
      [:& zoom-widget
-      {:zoom (:zoom state)
+      {:zoom (:zoom local)
        :on-increase (st/emitf dv/increase-zoom)
        :on-decrease (st/emitf dv/decrease-zoom)
        :on-zoom-to-50 (st/emitf dv/zoom-to-50)
@@ -153,13 +149,11 @@
      (when has-permission?
        [:span.btn-text-dark (tr "labels.edit-file")])]))
 
-
 (mf/defc header-sitemap
-  [{:keys [data index section state] :as props}]
-  (let [project (:project data)
-        file    (:file data)
-        page    (:page data)
-        frame   (get-in data [:frames index])
+  [{:keys [project file page frame] :as props}]
+  (let [project-name (:name project)
+        page-name    (:name page)
+        frame-name   (:name frame)
 
         toggle-thumbnails
         (st/emitf dv/toggle-thumbnails-panel)
@@ -175,11 +169,11 @@
      [:div.sitemap-zone {:alt (tr "viewer.header.sitemap")}
       [:div.breadcrumb
        {:on-click #(swap! show-dropdown? not)}
-       [:span.project-name (:name project)]
+       [:span.project-name project-name]
        [:span "/"]
        [:span.file-name (:name file)]
        [:span "/"]
-       [:span.page-name (:name page)]
+       [:span.page-name page-name]
        [:span.icon i/arrow-down]
 
        [:& dropdown {:show @show-dropdown?
@@ -193,20 +187,22 @@
       [:div.current-frame
        {:on-click toggle-thumbnails}
        [:span.label "/"]
-       [:span.label (:name frame)]
+       [:span.label frame-name]
        [:span.icon i/arrow-down]]]))
 
 (mf/defc header
-  {::mf/wrap-props false}
-  [props]
+  [{:keys [project file frames page local section index]}]
 
-  (let [section (obj/get props "section")
-        ;; TODO
+  (let [;; TODO
         ;; profile    (mf/deref refs/profile)
         ;; teams      (mf/deref refs/teams)
         ;; team-id    (get-in data [:project :team-id])
         ;; has-permission? (and (not= uuid/zero (:id profile))
         ;;                      (contains? teams team-id))
+
+
+        frame (get frames index)
+
         has-permission? true
 
         toggle-thumbnails
@@ -225,7 +221,10 @@
            ;; If the user doesn't have permission we disable the link
            :style {:pointer-events (when-not has-permission? "none")}} i/logo-icon]]
 
-     [:> header-sitemap {:project project}]
+     [:> header-sitemap {:project project
+                         :file file
+                         :page page
+                         :frame frame}]
 
      [:div.mode-zone
       [:button.mode-zone-button.tooltip.tooltip-bottom
@@ -247,4 +246,6 @@
         :alt "Code mode"}
        i/code]]
 
-     [:> header-options props]]))
+     [:> header-options {:section section
+                         :local local}]]))
+

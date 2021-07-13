@@ -113,7 +113,7 @@
   (mf/use-effect
    (mf/deps file-id page-id token)
    (fn []
-     (st/emit! (dv/initialize props))))
+     (st/emit! (dv/initialize-file props))))
 
   (let [data  (mf/deref refs/viewer-data)
         state (mf/deref refs/viewer-local)]

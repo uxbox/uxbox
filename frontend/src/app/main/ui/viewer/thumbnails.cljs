@@ -81,12 +81,17 @@
     [:span.name {:title (:name frame)} (:name frame)]]])
 
 (mf/defc thumbnails-panel
-  [{:keys [data index] :as props}]
+  [{:keys [frames page index] :as props}]
   (let [expanded? (mf/use-state false)
         container (mf/use-ref)
 
-        on-close #(st/emit! dv/toggle-thumbnails-panel)
-        selected (mf/use-var false)
+        frame     (get frames index)
+
+        objects   (:objects page)
+        index     (:index frame)
+
+        on-close  #(st/emit! dv/toggle-thumbnails-panel)
+        selected  (mf/use-var false)
 
         on-mouse-leave
         (fn [_]
@@ -110,13 +115,13 @@
 
       [:& thumbnails-summary {:on-toggle-expand #(swap! expanded? not)
                               :on-close on-close
-                              :total (count (:frames data))}]
+                              :total (count frames)}]
       [:& thumbnails-content {:expanded? @expanded?
-                              :total (count (:frames data))}
-       (for [[i frame] (d/enumerate (:frames data))]
+                              :total (count frames)}
+       (for [[i frame] (d/enumerate frames)]
          [:& thumbnail-item {:key i
                              :index i
                              :frame frame
-                             :objects (:objects data)
+                             :objects objects
                              :on-click on-item-click
                              :selected? (= i index)}])]]]))

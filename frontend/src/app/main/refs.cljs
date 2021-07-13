@@ -295,6 +295,9 @@
 (def viewer-data
   (l/derived :viewer-data st/state))
 
+(def viewer-state
+  (l/derived :viewer st/state))
+
 (def viewer-local
   (l/derived :viewer-local st/state))
 

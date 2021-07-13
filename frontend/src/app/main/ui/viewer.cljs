@@ -6,7 +6,11 @@
 
 (ns app.main.ui.viewer
   (:require
+   [app.common.uuid :as uuid]
    [app.common.data :as d]
+   [app.common.spec :as us]
+   [cljs.spec.alpha :as s]
+
    [app.common.geom.matrix :as gmt]
    [app.common.geom.point :as gpt]
    [app.common.geom.shapes :as geom]
@@ -30,29 +34,37 @@
    [okulary.core :as l]
    [rumext.alpha :as mf]))
 
+(defn- prepare-objects
+  [page frame]
+  (fn []
+    (let [objects   (:objects page)
+          frame-id  (:id frame)
+          modifier  (-> (gpt/point (:x frame) (:y frame))
+                        (gpt/negate)
+                        (gmt/translate-matrix))
+
+          update-fn #(d/update-when %1 %2 assoc-in [:modifiers :displacement] modifier)]
+
+      (->> (cp/get-children frame-id objects)
+           (d/concat [frame-id])
+           (reduce update-fn objects)))))
+
 (mf/defc viewport
   {::mf/wrap [mf/memo]}
-  [{:keys [state data index section] :as props}]
-  (let [zoom          (:zoom state)
-        objects       (:objects data)
+  [{:keys [local page frame]}]
+  (let [zoom          (:zoom local)
+        interactions? (:interactions-show? local)
 
-        frame         (get-in data [:frames index])
-        frame-id      (:id frame)
+        objects       (mf/use-memo
+                       (mf/deps page frame)
+                       (prepare-objects page frame))
 
-        modifier      (-> (gpt/point (:x frame) (:y frame))
-                          (gpt/negate)
-                          (gmt/translate-matrix))
-
-        update-fn     #(d/update-when %1 %2 assoc-in [:modifiers :displacement] modifier)
-
-        objects       (->> (d/concat [frame-id] (cp/get-children frame-id objects))
-                           (reduce update-fn objects))
-
-        interactions? (:interactions-show? state)
-        wrapper       (mf/use-memo (mf/deps objects) #(shapes/frame-container-factory objects interactions?))
+        wrapper       (mf/use-memo
+                       (mf/deps objects)
+                       #(shapes/frame-container-factory objects interactions?))
 
         ;; Retrieve frame again with correct modifier
-        frame         (get objects frame-id)
+        frame         (get objects (:id frame))
 
         width         (* (:width frame) zoom)
         height        (* (:height frame) zoom)
@@ -61,10 +73,9 @@
     [:div.viewport-container
      {:style {:width width
               :height height
-              :state state
               :position "relative"}}
 
-     (when (= section :comments)
+     #_(when (= section :comments)
        [:& comments-layer {:width width
                            :height height
                            :frame frame
@@ -82,9 +93,8 @@
                    :view-box vbox}]]]))
 
 (mf/defc main-panel
-  [{:keys [data state index section]}]
-  (let [frames  (:frames data)
-        frame   (get frames index)]
+  [{:keys [local page frames index section]}]
+  (let [frame (get frames index)]
     [:section.viewer-preview
      (cond
        (empty? frames)
@@ -95,26 +105,28 @@
        [:section.empty-state
         [:span (tr "viewer.frame-not-found")]]
 
-       (some? state)
+       (some? frame)
        [:& viewport
-        {:data data
+        {:frame frame
+         :page page
          :section section
          :index index
-         :state state
+         :local local
          }])]))
 
 (mf/defc viewer-content
-  {::mf/wrap-props false}
-  [props]
-  (let [index (obj/get props "index")
-        state (obj/get props "state")
+  [{:keys [params file page frames frame]}]
+  (let [local   (mf/deref refs/viewer-local)
+        project (mf/deref refs/viewer-project)
+        index   (:index params)
+        section (:section params)
 
         on-click
         (fn [event]
           ;; TODO: revisit this
           ;; (dom/stop-propagation event)
           (st/emit! (dcm/close-thread))
-          (let [mode (get state :interactions-mode)]
+          (let [mode (:interactions-mode local)]
             (when (= mode :show-on-click)
               (st/emit! dv/flash-interactions))))
 
@@ -148,43 +160,84 @@
     (mf/use-effect on-mount)
     (hooks/use-shortcuts ::viewer sc/shortcuts)
 
-    [:div.viewer-layout {:class (dom/classnames :force-visible
-                                                (:show-thumbnails state))}
-     [:> header props]
+    [:div.viewer-layout {:class (dom/classnames :force-visible (:show-thumbnails local))}
+     [:& header {:page page
+                 :frames frames
+                 :file file
+                 :project project
+                 :local local
+                 :section section
+                 :index index
+                 }]
      [:div.viewer-content {:on-click on-click}
-      #_(when (:show-thumbnails state)
-        [:& thumbnails-panel {:screen :viewer
-                              :index index}])]
-     #_[:> main-panel props]]))
+      (when (:show-thumbnails local)
+        [:& thumbnails-panel {:frames frames
+                              :index index
+                              :page page}])
+      [:& main-panel {:frames frames
+                      :page page
+                      :local local
+                      :index index
+                      :section index}]]]))
 
+(defn- select-frames
+  [{:keys [objects] :as page}]
+  (let [root (get objects uuid/zero)]
+    (into [] (comp (map #(get objects %))
+                   (filter #(= :frame (:type %))))
+          (reverse (:shapes root)))))
 
 (mf/defc viewer
-  {::mf/wrap-props false}
-  [props]
-  (let [state (mf/deref refs/viewer-local)
-        file  (mf/deref refs/viewer-file)]
+  [{:keys [params file]}]
 
-    (mf/use-effect
-     (mf/deps (:name file))
-     #(when-let [name (:name file)]
-        (dom/set-html-title (str "\u25b6 " (tr "title.viewer" name)))))
+  ;; Set the page title
+  (mf/use-effect
+   (mf/deps (:name file))
+   (fn []
+     (let [name (:name file)]
+       (dom/set-html-title (str "\u25b6 " (tr "title.viewer" name))))))
 
-    (when (and file state)
-      [:> viewer-content props])))
+  (let [page-id (:page-id params)
+        index   (:index params)
+        data    (mf/deref refs/viewer-data)
 
+        page    (mf/use-memo
+                 (mf/deps data page-id)
+                 (fn []
+                   (get-in data [:pages-index page-id])))
+
+        frames  (mf/use-memo
+                 (mf/deps page)
+                 #(select-frames page))]
+
+    [:& viewer-content
+     {:params params
+      :page page
+      :file file
+      :frames frames}]))
 
 ;; --- Component: Viewer Page
 
+(s/def ::file-id ::us/uuid)
+(s/def ::page-id ::us/uuid)
+(s/def ::section ::us/keyword)
+(s/def ::index ::us/integer)
+
+(s/def ::viewer-page-props
+  (s/keys :req-un [::file-id ::page-id ::section ::index]))
+
 (mf/defc viewer-page
-  {::mf/wrap-props false}
-  [props]
-  ;; [{:keys [file-id page-id index token section] :as props}]
+  [{:keys [file-id] :as props}]
+  (us/assert ::viewer-page-props props)
 
-  (let [file-id (obj/get props "file-id")]
-    (mf/use-effect
-     (mf/deps file-id)
+  (mf/use-effect
+   (mf/deps file-id)
+   (fn []
+     (st/emit! (dv/initialize-file props))
      (fn []
-       (st/emit! (dv/initialize props))))
+       (st/emit! (dv/finalize-file props)))))
 
-    [:> viewer props]))
-
+  (when-let [file (mf/deref refs/viewer-file)]
+    [:& viewer {:params props
+                :file file
+                :key (:id file)}]))

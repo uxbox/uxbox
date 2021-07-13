@@ -59,15 +59,14 @@
   (s/keys :req-un [::page-id ::file-id]
           :opt-un [::token]))
 
-(defn initialize
-  [{:keys [page-id file-id] :as params}]
+(defn initialize-file
+  [{:keys [file-id] :as params}]
   (us/assert ::initialize-params params)
   (ptk/reify ::initialize
     ptk/UpdateEvent
     (update [_ state]
       (-> state
           (assoc :current-file-id file-id)
-          (assoc :current-page-id page-id)
           (update :viewer-local
                   (fn [lstate]
                     (if (nil? lstate)
@@ -75,9 +74,17 @@
                       lstate)))))
 
     ptk/WatchEvent
-    (watch [_ _ _]
+    (watch [_ state _]
       (rx/of (fetch-bundle params)
              (fetch-comment-threads params)))))
+
+(defn finalize-file
+  [params]
+  (ptk/reify ::finalize-file
+    ptk/UpdateEvent
+    (update [_ state]
+      ;; TODO: complete this
+      (dissoc state :viewer-file :viewer-project :viewer-local))))
 
 ;; --- Select Page
 
@@ -88,25 +95,19 @@
                    (filter #(= :frame (:type %))))
           (reverse (:shapes root)))))
 
-(defn select-page
-  [page-id]
-  (ptk/reify ::select-page
-    ptk/UpdateEvent
-    (update [_ state]
-      state)))
+;; (defn initialize-page
+;;   [{:keys [page-id] :as params}]
+;;   (ptk/reify ::initialize
+;;     ptk/UpdateEvent
+;;     (update [_ state]
+;;       (let [page    (get-in state [:viewer :data :pages-index page-id])
+;;             ;; page    (assoc page :id page-id)
+;;             ;; frames  (extract-frames (:objects page))]
+;;         (-> state
+;;             (assoc :viewer-page page)
 
-      ;; (let [page    (get-in state [:viewer-data :pages-index page-id])
-      ;;       objects (:objects page)
-      ;;       frames  (extract-frames objects)]
-
-      ;;   (update state :viewer-local
-      ;;           assoc :view
-
-      ;;   (-> state
-      ;;       (update :viewer-data assoc
-      ;;               :objects objects
-      ;;               :page page
-      ;;               :frames frames))))))
+;;         (update state :viewer merge
+;;                 {:page page :frames frames})))))
 
 ;; --- Data Fetching
 
@@ -115,7 +116,7 @@
           :opt-un [::token]))
 
 (defn fetch-bundle
-  [{:keys [page-id file-id token] :as params}]
+  [{:keys [file-id token] :as params}]
   (us/assert ::fetch-bundle-params params)
   (ptk/reify ::fetch-file
     ptk/WatchEvent
@@ -126,8 +127,7 @@
              (rx/mapcat
               (fn [{:keys [fonts] :as bundle}]
                 (rx/of (df/fonts-fetched fonts)
-                       (bundle-fetched (merge bundle params))
-                       (select-page page-id)))))))))
+                       (bundle-fetched (merge bundle params))))))))))
 
 (defn bundle-fetched
   [{:keys [project file share-links libraries users data] :as bundle}]
@@ -137,11 +137,22 @@
     (update [_ state]
       (-> state
           (assoc :viewer-libraries (d/index-by :id libraries))
+          (assoc :viewer-users (d/index-by :id users))
           (assoc :viewer-share-links share-links)
           (assoc :viewer-project project)
           (assoc :viewer-file file)
-          (assoc :viewer-data data)
-          (assoc :viewer-users (d/index-by :id users))))))
+          (assoc :viewer-data data)))))
+
+
+
+      ;; (assoc state :viewer
+      ;;        {:libraries (d/index-by :id libraries)
+      ;;         :share-links share-links
+      ;;         :project project
+      ;;         :file file
+      ;;         :data data
+      ;;         :users (d/index-by :id users)}))))
+
 
 (defn fetch-comment-threads
   [{:keys [file-id page-id] :as params}]
@@ -345,7 +356,6 @@
         (when index
           (rx/of (go-to-frame-by-index index)))))))
 
-
 (defn go-to-section
   [section]
   (ptk/reify ::go-to-section
@@ -355,7 +365,6 @@
             pparams (:path-params route)
             qparams (:query-params route)]
         (rx/of (rt/nav :viewer pparams (assoc qparams :section section)))))))
-
 
 (defn set-current-frame [frame-id]
   (ptk/reify ::set-current-frame
