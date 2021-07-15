@@ -18,8 +18,6 @@
    [app.main.store :as st]
    [app.main.ui.comments :as cmt]
    [app.main.ui.hooks :as hooks]
-   [app.main.ui.viewer.shapes :as shapes]
-   [app.main.ui.viewer.thumbnails :refer [thumbnails-panel]]
    [app.main.ui.components.dropdown :refer [dropdown]]
    [app.main.ui.icons :as i]
    [app.util.dom :as dom]
@@ -48,8 +46,9 @@
          (fn [mode]
            (st/emit! (dcm/update-filters {:show mode}))))]
 
-    [:div.view-options
-     [:div.icon {:on-click toggle-dropdown} i/eye]
+    [:div.view-options {:on-click toggle-dropdown}
+     [:span.label (tr "labels.comments")]
+     [:span.icon i/arrow-down]
      [:& dropdown {:show @show-dropdown?
                    :on-close hide-dropdown}
       [:ul.dropdown.with-check
@@ -85,7 +84,7 @@
   (l/derived :comments-local st/state))
 
 (mf/defc comments-layer
-  [{:keys [zoom frame data] :as props}]
+  [{:keys [zoom frame data page file] :as props}]
   (let [profile     (mf/deref refs/profile)
 
         modifier1   (-> (gpt/point (:x frame) (:y frame))
@@ -116,8 +115,9 @@
 
         on-click
         (mf/use-callback
-         (mf/deps cstate data frame)
+         (mf/deps cstate frame page file)
          (fn [event]
+           (prn "on click")
            (dom/stop-propagation event)
            (if (some? (:open cstate))
              (st/emit! (dcm/close-thread))
@@ -125,8 +125,8 @@
                    position (-> (dom/get-offset-position event)
                                 (gpt/transform modifier2))
                    params   {:position position
-                             :page-id (get-in data [:page :id])
-                             :file-id (get-in data [:file :id])}]
+                             :page-id (:id page)
+                             :file-id (:id file)}]
                (st/emit! (dcm/create-draft params))))))
 
         on-draft-cancel
@@ -163,6 +163,3 @@
                                :on-cancel on-draft-cancel
                                :on-submit on-draft-submit
                                :zoom zoom}])]]]))
-
-
-

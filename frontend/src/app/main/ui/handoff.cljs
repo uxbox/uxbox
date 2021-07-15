@@ -28,13 +28,30 @@
        (dom/stop-propagation %)
        (st/emit! (dv/select-shape (:id frame)))))
 
-(mf/defc render-panel
-  [{:keys [data state index page-id file-id]}]
-  (let [locale  (mf/deref i18n/locale)
-        frames  (:frames data [])
-        objects (:objects data)
-        frame   (get frames index)]
 
+(mf/defc viewport
+  [{:keys [zoom file page frame]}]
+  (let [objects (:objects page)
+        page-id (:id page)
+        file-id (:id file)]
+    [:*
+     [:& left-sidebar {:frame frame}]
+     [:div.handoff-svg-wrapper {:on-click (handle-select-frame frame)}
+      [:div.handoff-svg-container
+       [:& render-frame-svg {:frame-id (:id frame)
+                             :zoom zoom
+                             :objects objects}]]]
+     [:& right-sidebar {:frame frame
+                        :page-id page-id
+                        :file-id file-id}]]))
+
+
+(mf/defc main-panel
+  [{:keys [local file page frames index section]}]
+  (let [frame   (get frames index)
+        objects (:objects page)
+        page-id (:id page)
+        file-id (:id file)]
     (mf/use-effect
      (mf/deps index)
      (fn []
@@ -45,37 +62,37 @@
      (cond
        (empty? frames)
        [:section.empty-state
-        [:span (t locale "viewer.empty-state")]]
+        [:span (tr "viewer.empty-state")]]
 
        (nil? frame)
        [:section.empty-state
-        [:span (t locale "viewer.frame-not-found")]]
+        [:span (tr "viewer.frame-not-found")]]
 
        :else
-       [:*
-        [:& left-sidebar {:frame frame}]
-        [:div.handoff-svg-wrapper {:on-click (handle-select-frame frame)}
-         [:div.handoff-svg-container
-          [:& render-frame-svg {:frame-id (:id frame)
-                                :zoom (:zoom state)
-                                :objects objects}]]]
-        [:& right-sidebar {:frame frame
-                           :page-id page-id
-                           :file-id file-id}]])]))
+       [:& viewport {:zoom (:zoom local)
+                     :file file
+                     :frame frame
+                     :page page}])]))
 
 (mf/defc handoff-content
-  [{:keys [data state index page-id file-id] :as props}]
-  (let [on-mouse-wheel
-        (mf/use-callback
-         (fn [event]
-           (when (or (kbd/ctrl? event) (kbd/meta? event))
-             (dom/prevent-default event)
-             (let [event (.getBrowserEvent ^js event)
-                   delta (+ (.-deltaY ^js event)
-                            (.-deltaX ^js event))]
-               (if (pos? delta)
-                 (st/emit! dv/decrease-zoom)
-                 (st/emit! dv/increase-zoom))))))
+  ;; [{:keys [data state index page-id file-id] :as props}]
+  [{:keys [params file page frames]}]
+
+  (let [local   (mf/deref refs/viewer-local)
+        project (mf/deref refs/viewer-project)
+        index   (:index params)
+        section (:section params)
+
+        on-mouse-wheel
+        (fn [event]
+          (when (or (kbd/ctrl? event) (kbd/meta? event))
+            (dom/prevent-default event)
+            (let [event (.getBrowserEvent ^js event)
+                  delta (+ (.-deltaY ^js event)
+                           (.-deltaX ^js event))]
+              (if (pos? delta)
+                (st/emit! dv/decrease-zoom)
+                (st/emit! dv/increase-zoom)))))
 
         on-mount
         (fn []
@@ -89,23 +106,27 @@
     (mf/use-effect on-mount)
     (hooks/use-shortcuts ::handoff sc/shortcuts)
 
-    [:div.handoff-layout {:class (dom/classnames :force-visible
-                                                 (:show-thumbnails state))}
+    [:div.handoff-layout {:class (dom/classnames :force-visible (:show-thumbnails local))}
      [:& header
-      {:data data
-       :state state
-       :index index
-       :section :handoff}]
+      {:page page
+       :frames frames
+       :file file
+       :project project
+       :local local
+       :section section
+       :index index}]
+
      [:div.viewer-content
-      (when (:show-thumbnails state)
-        [:& thumbnails-panel {:index index
-                              :data data
-                              :screen :handoff}])
-      [:& render-panel {:data data
-                        :state state
-                        :index index
-                        :page-id page-id
-                        :file-id file-id}]]]))
+      (when (:show-thumbnails local)
+        [:& thumbnails-panel {:frames frames
+                              :index index
+                              :page page}])
+      [:& main-panel {:frames frames
+                      :page page
+                      :file file
+                      :local local
+                      :index index
+                      :section section}]]]))
 
 (mf/defc handoff
   [{:keys [file-id page-id index token] :as props}]

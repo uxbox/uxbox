@@ -86,29 +86,6 @@
       ;; TODO: complete this
       (dissoc state :viewer-file :viewer-project :viewer-local))))
 
-;; --- Select Page
-
-(defn- extract-frames
-  [objects]
-  (let [root (get objects uuid/zero)]
-    (into [] (comp (map #(get objects %))
-                   (filter #(= :frame (:type %))))
-          (reverse (:shapes root)))))
-
-;; (defn initialize-page
-;;   [{:keys [page-id] :as params}]
-;;   (ptk/reify ::initialize
-;;     ptk/UpdateEvent
-;;     (update [_ state]
-;;       (let [page    (get-in state [:viewer :data :pages-index page-id])
-;;             ;; page    (assoc page :id page-id)
-;;             ;; frames  (extract-frames (:objects page))]
-;;         (-> state
-;;             (assoc :viewer-page page)
-
-;;         (update state :viewer merge
-;;                 {:page page :frames frames})))))
-
 ;; --- Data Fetching
 
 (s/def ::fetch-bundle-params
@@ -135,6 +112,7 @@
   (ptk/reify ::bundle-fetched
     ptk/UpdateEvent
     (update [_ state]
+      (prn "bundle-fetched" (keys data))
       (-> state
           (assoc :viewer-libraries (d/index-by :id libraries))
           (assoc :viewer-users (d/index-by :id users))
@@ -430,7 +408,8 @@
       (let [toggled? (contains? (get-in state [:viewer-local :collapsed]) id)]
         (update-in state [:viewer-local :collapsed] (if toggled? disj conj) id)))))
 
-(defn hover-shape [id hover?]
+(defn hover-shape
+  [id hover?]
   (ptk/reify ::hover-shape
     ptk/UpdateEvent
     (update [_ state]

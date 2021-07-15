@@ -20,7 +20,6 @@
    [app.main.ui.context :as ctx]
    [app.main.ui.cursors :as c]
    [app.main.ui.dashboard :refer [dashboard]]
-   [app.main.ui.handoff :refer [handoff]]
    [app.main.ui.icons :as i]
    [app.main.ui.messages :as msgs]
    [app.main.ui.onboarding]
@@ -154,16 +153,11 @@
              file-id (get-in route [:path-params :file-id])
              page-id (get-in route [:path-params :page-id])]
          [:& fs/fullscreen-wrapper {}
-          (if (= section :handoff)
-            [:& handoff {:page-id page-id
-                         :file-id file-id
-                         :index index
-                         :token token}]
-            [:& viewer-page {:page-id page-id
-                             :file-id file-id
-                             :section section
-                             :index index
-                             :token token}])])
+          [:& viewer-page {:page-id page-id
+                           :file-id file-id
+                           :section section
+                           :index index
+                           :token token}]])
 
        :render-object
        (do
