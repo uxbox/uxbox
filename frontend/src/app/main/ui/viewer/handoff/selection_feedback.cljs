@@ -36,6 +36,7 @@
             (->> selected (map resolve-shape) (filterv (comp not nil?)))))]
     #(l/derived selected->shapes st/state)))
 
+
 (defn make-hover-shapes-iref
   "Creates a lens to the shapes the user is making hover"
   []
@@ -45,6 +46,15 @@
                 objects (get-in state [:viewer-data :objects])]
             (get objects hover)))]
     #(l/derived hover->shapes st/state)))
+
+
+(defn- resolve-shapes
+  [objects ids]
+  (let [resolve-shape #(get objects %)]
+    (into [] (comp (map resolve-shape)
+                   (filter some?))
+          ids)))
+
 
 (def selected-zoom
   (l/derived (l/in [:viewer-local :zoom]) st/state))
@@ -76,19 +86,22 @@
                      :stroke-width selection-rect-width}}]]))
 
 (mf/defc selection-feedback
-  [{:keys [frame local]}]
-  (let [zoom             (:zoom local)
+  [{:keys [frame local objects]}]
+  (let [{:keys [hover selected zoom]} local
 
-        hover-shapes-ref (mf/use-memo (make-hover-shapes-iref))
-        hover-shape (-> (or (mf/deref hover-shapes-ref) frame)
-                        (gsh/translate-to-frame frame))
+        ;; hover-shapes-ref (mf/use-memo (make-hover-shapes-iref))
+        ;; hover-shape (-> (or (mf/deref hover-shapes-ref) frame)
+        ;;                 (gsh/translate-to-frame frame))
 
-        selected-shapes-ref (mf/use-memo (make-selected-shapes-iref))
-        selected-shapes (->> (mf/deref selected-shapes-ref)
-                             (map #(gsh/translate-to-frame % frame)))
+        ;; selected-shapes-ref (mf/use-memo (make-selected-shapes-iref))
+        ;; selected-shapes (->> (mf/deref selected-shapes-ref)
+        ;;                      (map #(gsh/translate-to-frame % frame)))
 
-        selrect (gsh/selection-rect selected-shapes)
-        bounds (frame->bounds frame)]
+        hover-shape     (or (first (resolve-shapes objects [hover])) frame)
+        selected-shapes (resolve-shapes objects selected)
+
+        selrect         (gsh/selection-rect selected-shapes)
+        bounds          (frame->bounds frame)]
 
     (when (seq selected-shapes)
       [:g.selection-feedback {:pointer-events "none"}
