@@ -51,6 +51,7 @@
 
         file    (:file data)
         users   (:users data)
+        project (:project data)
 
         page    (mf/use-memo
                  (mf/deps file page-id)
@@ -62,16 +63,7 @@
                  (fn []
                    (select-frames page)))
 
-        frame   (get frames index)
-
-
-        ;; state   (mf/use-memo
-        ;;          (mf/deps page-id index)
-        ;;          #(-> state
-        ;;               (assoc :frames frames)
-        ;;               (assoc :frame frame)
-        ;;               (assoc :page page)))
-        ]
+        frame   (get frames index)]
 
     (hooks/use-shortcuts ::viewer sc/shortcuts)
 
@@ -88,9 +80,10 @@
                    :handoff-layout (= section :handoff))}
 
 
-     [:& header {:page page
+     [:& header {:project project
+                 :file file
+                 :page page
                  :frame frame
-                 :data data
                  :zoom (:zoom local)
                  :section section}]
 

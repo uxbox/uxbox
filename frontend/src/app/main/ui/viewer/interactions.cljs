@@ -95,21 +95,20 @@
         on-key-down
         (fn [event]
           (when (kbd/esc? event)
-            (st/emit! (dcm/close-thread))))
+            (st/emit! (dcm/close-thread))))]
 
-        on-mount
-        (fn []
-          ;; bind with passive=false to allow the event to be cancelled
-          ;; https://stackoverflow.com/a/57582286/3219895
-          (let [key1 (events/listen goog/global "wheel" on-mouse-wheel #js {"passive" false})
-                key2 (events/listen js/window "keydown" on-key-down)
-                key3 (events/listen js/window "click" on-click)]
-            (fn []
-              (events/unlistenByKey key1)
-              (events/unlistenByKey key2)
-              (events/unlistenByKey key3))))]
+    (mf/use-effect
+     (fn []
+       ;; bind with passive=false to allow the event to be cancelled
+       ;; https://stackoverflow.com/a/57582286/3219895
+       (let [key1 (events/listen goog/global "wheel" on-mouse-wheel #js {"passive" false})
+             key2 (events/listen js/window "keydown" on-key-down)
+             key3 (events/listen js/window "click" on-click)]
+         (fn []
+           (events/unlistenByKey key1)
+           (events/unlistenByKey key2)
+           (events/unlistenByKey key3)))))
 
-    (mf/use-effect on-mount)
 
     [:div.viewport-container
      {:style {:width (:width size)

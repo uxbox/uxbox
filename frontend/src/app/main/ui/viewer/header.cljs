@@ -70,9 +70,9 @@
        [:span.btn-text-dark (tr "labels.edit-file")])]))
 
 (mf/defc header-sitemap
-  [{:keys [data page frame] :as props}]
-  (let [project-name (get-in data [:project :name])
-        file-name    (get-in data [:file :name])
+  [{:keys [project file page frame] :as props}]
+  (let [project-name (:name project)
+        file-name    (:name file)
         page-name    (:name page)
         frame-name   (:name frame)
 
@@ -100,10 +100,10 @@
        [:& dropdown {:show @show-dropdown?
                      :on-close #(swap! show-dropdown? not)}
         [:ul.dropdown
-         (for [id (:pages data)]
+         (for [id (get-in file [:data :pages])]
            [:li {:id (str id)
                  :on-click (partial navigate-to id)}
-            (get-in data [:pages-index id :name])])]]]
+            (get-in file [:data :pages-index id :name])])]]]
 
       [:div.current-frame
        {:on-click toggle-thumbnails}
@@ -112,7 +112,7 @@
        [:span.icon i/arrow-down]]]))
 
 (mf/defc header
-  [{:keys [data frame page zoom section]}]
+  [{:keys [project file page frame zoom section]}]
 
   (let [
 
@@ -141,7 +141,7 @@
            ;; If the user doesn't have permission we disable the link
            :style {:pointer-events (when-not has-permission? "none")}} i/logo-icon]]
 
-     [:& header-sitemap {:data data :page page :frame frame}]
+     [:& header-sitemap {:project project :file file :page page :frame frame}]
 
      [:div.mode-zone
       [:button.mode-zone-button.tooltip.tooltip-bottom
