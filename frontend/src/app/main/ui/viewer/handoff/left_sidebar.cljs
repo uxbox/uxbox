@@ -16,12 +16,6 @@
    [okulary.core :as l]
    [rumext.alpha :as mf]))
 
-(def selected-shapes
-  (l/derived (comp :selected :viewer-local) st/state))
-
-(def page-ref
-  (l/derived (comp :page :viewer-data) st/state))
-
 (defn- make-collapsed-iref
   [id]
   #(-> (l/in [:viewer-local :collapsed id])
@@ -31,7 +25,9 @@
   [{:keys [item selected objects disable-collapse?] :as props}]
   (let [id        (:id item)
         selected? (contains? selected id)
-        item-ref (mf/use-ref nil)
+        item-ref  (mf/use-ref nil)
+
+
         collapsed-iref (mf/use-memo
                         (mf/deps id)
                         (make-collapsed-iref id))
@@ -94,10 +90,10 @@
               :objects objects
               :key (:id item)}]))])]))
 
-(mf/defc left-sidebar [{:keys [frame]}]
-  (let [page (mf/deref page-ref)
-        selected (mf/deref selected-shapes)
-        objects (:objects page)]
+(mf/defc left-sidebar
+  [{:keys [frame page local]}]
+  (let [selected (:selected local)
+        objects  (:objects page)]
 
     [:aside.settings-bar.settings-bar-left
      [:div.settings-bar-inside

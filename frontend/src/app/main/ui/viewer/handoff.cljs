@@ -32,8 +32,7 @@
 
 (mf/defc viewport
   [{:keys [local file page frame]}]
-  (let [zoom (:zoom local)
-        on-mouse-wheel
+  (let [on-mouse-wheel
         (fn [event]
           (when (or (kbd/ctrl? event) (kbd/meta? event))
             (dom/prevent-default event)
@@ -62,12 +61,15 @@
                  (dv/select-shape (:id frame)))))
 
     [:*
-     [:& left-sidebar {:frame frame}]
+     [:& left-sidebar {:frame frame
+                       :local local
+                       :page page}]
      [:div.handoff-svg-wrapper {:on-click (handle-select-frame frame)}
       [:div.handoff-svg-container
-       [:& render-frame-svg {:frame frame :page page :zoom zoom}]]]
+       [:& render-frame-svg {:frame frame :page page :local local}]]]
 
      ;; TODO: revisit params, maybe pass directly page and file?
      [:& right-sidebar {:frame frame
-                        :page-id (:id page)
-                        :file-id (:id file)}]]))
+                        :selected (:selected local)
+                        :page page
+                        :file file}]]))

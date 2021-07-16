@@ -105,8 +105,7 @@
         fonts   (db/query conn :team-font-variant
                           {:team-id (:team-id project)
                            :deleted-at nil})]
-    {:file (dissoc file :data)
-     :data (:data file)
+    {:file file
      :users users
      :fonts fonts
      :share-links links

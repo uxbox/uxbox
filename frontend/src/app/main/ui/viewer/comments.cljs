@@ -84,7 +84,7 @@
   (l/derived :comments-local st/state))
 
 (mf/defc comments-layer
-  [{:keys [zoom frame data page file] :as props}]
+  [{:keys [zoom file users frame page] :as props}]
   (let [profile     (mf/deref refs/profile)
 
         modifier1   (-> (gpt/point (:x frame) (:y frame))
@@ -117,7 +117,6 @@
         (mf/use-callback
          (mf/deps cstate frame page file)
          (fn [event]
-           (prn "on click")
            (dom/stop-propagation event)
            (if (some? (:open cstate))
              (st/emit! (dcm/close-thread))
@@ -155,7 +154,7 @@
        (when-let [id (:open cstate)]
          (when-let [thread (get threads-map id)]
            [:& cmt/thread-comments {:thread thread
-                                    :users (:users data)
+                                    :users users
                                     :zoom zoom}]))
 
        (when-let [draft (:draft cstate)]

@@ -9,26 +9,19 @@
    [app.common.data :as d]
    [app.common.geom.matrix :as gmt]
    [app.common.geom.point :as gpt]
-   [app.common.geom.shapes :as geom]
    [app.common.pages :as cp]
    [app.common.spec :as us]
-   [app.common.uuid :as uuid]
    [app.main.data.comments :as dcm]
    [app.main.data.viewer :as dv]
-   [app.main.data.viewer.shortcuts :as sc]
-   [app.main.refs :as refs]
+   [app.main.ui.icons :as i]
+   [app.main.ui.components.dropdown :refer [dropdown]]
    [app.main.store :as st]
-   [app.main.ui.comments :as cmt]
-   [app.main.ui.hooks :as hooks]
+   [app.main.refs :as refs]
    [app.main.ui.viewer.comments :refer [comments-layer]]
-   [app.main.ui.viewer.header :refer [header]]
    [app.main.ui.viewer.shapes :as shapes]
-   [app.main.ui.viewer.thumbnails :refer [thumbnails-panel]]
-   [app.main.ui.handoff :as handoff]
    [app.util.dom :as dom]
    [app.util.i18n :as i18n :refer [tr]]
    [app.util.keyboard :as kbd]
-   [app.util.object :as obj]
    [cljs.spec.alpha :as s]
    [goog.events :as events]
    [okulary.core :as l]
@@ -49,9 +42,20 @@
            (d/concat [frame-id])
            (reduce update-fn objects)))))
 
+
+;; TODO: refactor, looks like comments stuff is highly coupled to the
+;; interactions viewport.
+
+(defn- calculate-size
+  [frame zoom]
+  {:width  (* (:width frame) zoom)
+   :height (* (:height frame) zoom)
+   :vbox   (str "0 0 " (:width frame 0) " " (:height frame 0))})
+
+
 (mf/defc viewport
   {::mf/wrap [mf/memo]}
-  [{:keys [local file page frame section]}]
+  [{:keys [local file users page frame section]}]
   (let [zoom          (:zoom local)
         interactions? (:interactions-show? local)
 
@@ -60,15 +64,14 @@
                        (prepare-objects page frame))
 
         wrapper       (mf/use-memo
-                       (mf/deps objects)
+                      (mf/deps objects)
                        #(shapes/frame-container-factory objects interactions?))
 
         ;; Retrieve frame again with correct modifier
         frame         (get objects (:id frame))
-
-        width         (* (:width frame) zoom)
-        height        (* (:height frame) zoom)
-        vbox          (str "0 0 " (:width frame 0) " " (:height frame 0))
+        size          (mf/use-memo
+                       (mf/deps frame zoom)
+                       (fn [] (calculate-size frame zoom)))
 
         on-click
         (fn [event]
@@ -109,24 +112,63 @@
     (mf/use-effect on-mount)
 
     [:div.viewport-container
-     {:style {:width width
-              :height height
+     {:style {:width (:width size)
+              :height (:height size)
               :position "relative"}}
 
      (when (= section :comments)
-       [:& comments-layer {:width width
-                           :height height
+       [:& comments-layer {:file file
+                           :users users
                            :frame frame
                            :page page
-                           :file file
                            :zoom zoom}])
 
-     [:svg {:view-box vbox
-            :width width
-            :height height
+     [:svg {:view-box (:vbox size)
+            :width (:width size)
+            :height (:height size)
             :version "1.1"
             :xmlnsXlink "http://www.w3.org/1999/xlink"
             :xmlns "http://www.w3.org/2000/svg"}
       [:& wrapper {:shape frame
                    :show-interactions? interactions?
-                   :view-box vbox}]]]))
+                   :view-box (:vbox size)}]]]))
+
+
+(mf/defc interactions-menu
+  []
+  ;; TODO: optimize access to viewer-local
+  (let [local           (mf/deref refs/viewer-local)
+
+        ;; TODO: change name?
+        mode            (:interactions-mode local)
+
+        show-dropdown?  (mf/use-state false)
+        toggle-dropdown (mf/use-fn #(swap! show-dropdown? not))
+        hide-dropdown   (mf/use-fn #(reset! show-dropdown? false))
+
+        select-mode
+        (mf/use-callback
+         (fn [mode]
+           (st/emit! (dv/set-interactions-mode mode))))]
+
+    [:div.view-options {:on-click toggle-dropdown}
+     [:span.label (tr "viewer.header.interactions")]
+     [:span.icon i/arrow-down]
+     [:& dropdown {:show @show-dropdown?
+                   :on-close hide-dropdown}
+      [:ul.dropdown.with-check
+       [:li {:class (dom/classnames :selected (= mode :hide))
+             :on-click #(select-mode :hide)}
+        [:span.icon i/tick]
+        [:span.label (tr "viewer.header.dont-show-interactions")]]
+
+       [:li {:class (dom/classnames :selected (= mode :show))
+             :on-click #(select-mode :show)}
+        [:span.icon i/tick]
+        [:span.label (tr "viewer.header.show-interactions")]]
+
+       [:li {:class (dom/classnames :selected (= mode :show-on-click))
+             :on-click #(select-mode :show-on-click)}
+        [:span.icon i/tick]
+        [:span.label (tr "viewer.header.show-interactions-on-click")]]]]]))
+

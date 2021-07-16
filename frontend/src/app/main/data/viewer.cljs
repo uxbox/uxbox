@@ -59,7 +59,7 @@
   (s/keys :req-un [::page-id ::file-id]
           :opt-un [::token]))
 
-(defn initialize-file
+(defn initialize
   [{:keys [file-id] :as params}]
   (us/assert ::initialize-params params)
   (ptk/reify ::initialize
@@ -78,9 +78,9 @@
       (rx/of (fetch-bundle params)
              (fetch-comment-threads params)))))
 
-(defn finalize-file
+(defn finalize
   [params]
-  (ptk/reify ::finalize-file
+  (ptk/reify ::finalize
     ptk/UpdateEvent
     (update [_ state]
       ;; TODO: complete this
@@ -107,19 +107,25 @@
                        (bundle-fetched (merge bundle params))))))))))
 
 (defn bundle-fetched
-  [{:keys [project file share-links libraries users data] :as bundle}]
+  [{:keys [project file share-links libraries users] :as bundle}]
   ;; (us/verify ::bundle bundle)
   (ptk/reify ::bundle-fetched
     ptk/UpdateEvent
     (update [_ state]
-      (prn "bundle-fetched" (keys data))
-      (-> state
-          (assoc :viewer-libraries (d/index-by :id libraries))
-          (assoc :viewer-users (d/index-by :id users))
-          (assoc :viewer-share-links share-links)
-          (assoc :viewer-project project)
-          (assoc :viewer-file file)
-          (assoc :viewer-data data)))))
+      (assoc state :viewer
+             {:libraries (d/index-by :id libraries)
+              :users (d/index-by :id users)
+              :share-links share-links
+              :project project
+              :file file}))))
+
+      ;; (-> state
+      ;;     (assoc :viewer-libraries (d/index-by :id libraries))
+      ;;     (assoc :viewer-users (d/index-by :id users))
+      ;;     (assoc :viewer-share-links share-links)
+      ;;     (assoc :viewer-project project)
+      ;;     (assoc :viewer-file file)
+      ;;     (assoc :viewer-data data)))))
 
 
 

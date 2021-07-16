@@ -35,28 +35,70 @@
    [okulary.core :as l]
    [rumext.alpha :as mf]))
 
-(mf/defc viewer-layout
-  [{:keys [local index section file page project frames children] :as props}]
-  (let [frame (get frames index)]
+(defn- select-frames
+  [{:keys [objects] :as page}]
+  (let [root (get objects uuid/zero)]
+    (into [] (comp (map #(get objects %))
+                   (filter #(= :frame (:type %))))
+          (reverse (:shapes root)))))
+
+(mf/defc viewer
+  [{:keys [params data]}]
+
+  (let [{:keys [page-id section index]} params
+
+        local   (mf/deref refs/viewer-local)
+
+        file    (:file data)
+        users   (:users data)
+
+        page    (mf/use-memo
+                 (mf/deps file page-id)
+                 (fn []
+                   (get-in file [:data :pages-index page-id])))
+
+        frames  (mf/use-memo
+                 (mf/deps page)
+                 (fn []
+                   (select-frames page)))
+
+        frame   (get frames index)
+
+
+        ;; state   (mf/use-memo
+        ;;          (mf/deps page-id index)
+        ;;          #(-> state
+        ;;               (assoc :frames frames)
+        ;;               (assoc :frame frame)
+        ;;               (assoc :page page)))
+        ]
+
     (hooks/use-shortcuts ::viewer sc/shortcuts)
+
+    ;; Set the page title
+    (mf/use-effect
+     (mf/deps (:name file))
+     (fn []
+       (let [name (:name file)]
+         (dom/set-html-title (str "\u25b6 " (tr "title.viewer" name))))))
 
     [:div {:class (dom/classnames
                    :force-visible (:show-thumbnails local)
                    :viewer-layout (not= section :handoff)
                    :handoff-layout (= section :handoff))}
+
+
      [:& header {:page page
-                 :frames frames
-                 :file file
-                 :project project
-                 :local local
-                 :section section
-                 :index index }]
+                 :frame frame
+                 :data data
+                 :zoom (:zoom local)
+                 :section section}]
+
      [:div.viewer-content
       (when (:show-thumbnails local)
         [:& thumbnails-panel {:frames frames
                               :page page
                               :index index}])
-
       [:section.viewer-preview
        (cond
          (empty? frames)
@@ -68,78 +110,20 @@
           [:span (tr "viewer.frame-not-found")]]
 
          (some? frame)
-         (children))]]]))
-
-(defn- select-frames
-  [{:keys [objects] :as page}]
-  (let [root (get objects uuid/zero)]
-    (into [] (comp (map #(get objects %))
-                   (filter #(= :frame (:type %))))
-          (reverse (:shapes root)))))
-
-(mf/defc viewer
-  [{:keys [params file]}]
-
-  ;; Set the page title
-  (mf/use-effect
-   (mf/deps (:name file))
-   (fn []
-     (let [name (:name file)]
-       (dom/set-html-title (str "\u25b6 " (tr "title.viewer" name))))))
-
-  (let [{:keys [page-id section index]} params
-
-        data    (mf/deref refs/viewer-data)
-        local   (mf/deref refs/viewer-local)
-        project (mf/deref refs/viewer-project)
-
-        page    (mf/use-memo
-                 (mf/deps data page-id)
-                 (fn []
-                   (get-in data [:pages-index page-id])))
-
-        frames  (mf/use-memo
-                 (mf/deps page)
-                 #(select-frames page))
-
-        frame   (get frames index)]
-
-      [:& viewer-layout
-       {:section section
-        :index index
-        :local local
-        :page page
-        :file file
-        :project project
-        :frames frames}
-
-       #(mf/html
          (if (= :handoff section)
            [:& handoff/viewport
             {:frame frame
-             :file file
              :page page
+             :file file
              :section section
              :local local}]
            [:& interactions/viewport
             {:frame frame
-             :file file
              :page page
+             :file file
+             :users users
              :section section
-             :local local}]))]))
-
-
-    ;; (if (= :handoff (:section params))
-    ;;   [:& handoff-content
-    ;;    {:params params
-    ;;     :page page
-    ;;     :file file
-    ;;     :frames frames}]
-    ;;   [:& viewer-content
-    ;;    {:params params
-    ;;     :page page
-    ;;     :file file
-    ;;     :frames frames}])))
+             :local local}]))]]]))
 
 ;; --- Component: Viewer Page
 
@@ -158,11 +142,10 @@
   (mf/use-effect
    (mf/deps file-id)
    (fn []
-     (st/emit! (dv/initialize-file props))
+     (st/emit! (dv/initialize props))
      (fn []
-       (st/emit! (dv/finalize-file props)))))
+       (st/emit! (dv/finalize props)))))
 
-  (when-let [file (mf/deref refs/viewer-file)]
-    [:& viewer {:params props
-                :file file
-                :key (:id file)}]))
+  (when-let [data (mf/deref refs/viewer-data)]
+    (let [key (str (get-in data [:file :id]))]
+      [:& viewer {:params props :data data :key key}])))

@@ -123,6 +123,7 @@
 
     .breadcrumb {
       display: flex;
+      position: relative;
 
       > span {
         color: $color-gray-20;
@@ -135,6 +136,7 @@
 
       > .dropdown {
         top: 45px;
+        right: 10px;
       }
     }
 

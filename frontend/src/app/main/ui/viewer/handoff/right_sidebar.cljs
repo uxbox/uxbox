@@ -13,28 +13,19 @@
    [app.main.ui.viewer.handoff.code :refer [code]]
    [app.main.ui.icons :as i]
    [app.main.ui.workspace.sidebar.layers :refer [element-icon]]
-   [app.util.i18n :refer [t] :as i18n]
+   [app.main.ui.viewer.handoff.selection-feedback :refer [resolve-shapes]]
+   [app.util.i18n :refer [tr]]
    [okulary.core :as l]
    [rumext.alpha :as mf]))
 
-(defn make-selected-shapes-iref
-  []
-  (let [selected->shapes
-        (fn [state]
-          (let [selected (get-in state [:viewer-local :selected])
-                objects (get-in state [:viewer-data :page :objects])
-                resolve-shape #(get objects %)]
-            (mapv resolve-shape selected)))]
-    #(l/derived selected->shapes st/state)))
-
 (mf/defc right-sidebar
-  [{:keys [frame page-id file-id]}]
-  (let [expanded (mf/use-state false)
-        locale (mf/deref i18n/locale)
-        section (mf/use-state :info #_:code)
-        selected-ref (mf/use-memo (make-selected-shapes-iref))
-        shapes (mf/deref selected-ref)
-        selected-type (-> shapes first (:type :not-found))]
+  [{:keys [frame page file selected]}]
+  (let [expanded      (mf/use-state false)
+        section       (mf/use-state :info #_:code)
+
+        shapes        (resolve-shapes (:objects page) selected)
+        selected-type (or (-> shapes first :type) :not-found)]
+
     [:aside.settings-bar.settings-bar-right {:class (when @expanded "expanded")}
      [:div.settings-bar-inside
       (when (seq shapes)
@@ -43,24 +34,24 @@
           (if (> (count shapes) 1)
             [:*
              [:span.tool-window-bar-icon i/layers]
-             [:span.tool-window-bar-title (t locale "handoff.tabs.code.selected.multiple" (count shapes))]]
+             [:span.tool-window-bar-title (tr "handoff.tabs.code.selected.multiple" (count shapes))]]
             [:*
              [:span.tool-window-bar-icon
               [:& element-icon {:shape (-> shapes first)}]]
-             [:span.tool-window-bar-title (->> selected-type d/name (str "handoff.tabs.code.selected.") (t locale))]])
+             [:span.tool-window-bar-title (->> selected-type d/name (str "handoff.tabs.code.selected.") (tr))]])
           ]
          [:div.tool-window-content
           [:& tab-container {:on-change-tab #(do
                                                (reset! expanded false)
                                                (reset! section %))
                              :selected @section}
-           [:& tab-element {:id :info :title (t locale "handoff.tabs.info")}
-            [:& attributes {:page-id page-id
-                            :file-id file-id
+           [:& tab-element {:id :info :title (tr "handoff.tabs.info")}
+            [:& attributes {:page-id (:id page)
+                            :file-id (:id file)
                             :frame frame
                             :shapes shapes}]]
 
-           [:& tab-element {:id :code :title (t locale "handoff.tabs.code")}
+           [:& tab-element {:id :code :title (tr "handoff.tabs.code")}
             [:& code {:frame frame
                       :shapes shapes
                       :on-expand #(swap! expanded not)}]]]]])]]))

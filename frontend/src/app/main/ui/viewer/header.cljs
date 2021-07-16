@@ -20,6 +20,7 @@
    [app.main.ui.icons :as i]
    [app.main.ui.viewer.comments :refer [comments-menu]]
    [app.main.ui.workspace.header :refer [zoom-widget]]
+   [app.main.ui.viewer.interactions :refer [interactions-menu]]
    [app.util.dom :as dom]
    [app.util.i18n :as i18n :refer [tr]]
    [app.util.object :as obj]
@@ -27,90 +28,8 @@
    [app.util.webapi :as wapi]
    [rumext.alpha :as mf]))
 
-;; (mf/defc share-link
-;;   [{:keys [token] :as props}]
-;;   (let [show-dropdown? (mf/use-state false)
-;;         dropdown-ref   (mf/use-ref)
-;;         create (st/emitf (dv/create-share-link))
-;;         delete (st/emitf (dv/delete-share-link))
-
-;;         router (mf/deref refs/router)
-;;         route  (mf/deref refs/route)
-;;         link   (rt/resolve router
-;;                            :viewer
-;;                            (:path-params route)
-;;                            {:token token :index "0"})
-;;         link   (assoc cfg/public-uri :fragment link)
-
-;;         copy-link
-;;         (fn [_]
-;;           (wapi/write-to-clipboard (str link))
-;;           (st/emit! (dm/show {:type :info
-;;                               :content "Link copied successfuly!"
-;;                               :timeout 3000})))]
-;;     [:*
-;;      [:span.btn-primary
-;;       {:alt (tr "viewer.header.share.title")
-;;        :on-click #(swap! show-dropdown? not)}
-;;       (tr "viewer.header.share.title")]
-
-;;      [:& dropdown {:show @show-dropdown?
-;;                    :on-close #(swap! show-dropdown? not)
-;;                    :container dropdown-ref}
-;;       [:div.dropdown.share-link-dropdown {:ref dropdown-ref}
-;;        [:span.share-link-title (tr "viewer.header.share.title")]
-;;        [:div.share-link-input
-;;         (if (string? token)
-;;           [:*
-;;             [:span.link (str link)]
-;;             [:span.link-button {:on-click copy-link}
-;;              (tr "viewer.header.share.copy-link")]]
-;;           [:span.link-placeholder (tr "viewer.header.share.placeholder")])]
-
-;;        [:span.share-link-subtitle (tr "viewer.header.share.subtitle")]
-;;        [:div.share-link-buttons
-;;         (if (string? token)
-;;           [:button.btn-warning {:on-click delete}
-;;            (tr "viewer.header.share.remove-link")]
-;;           [:button.btn-primary {:on-click create}
-;;            (tr "viewer.header.share.create-link")])]]]]))
-
-(mf/defc interactions-menu
-  [{:keys [state] :as props}]
-  (let [imode          (:interactions-mode state)
-
-        show-dropdown?  (mf/use-state false)
-        toggle-dropdown (mf/use-fn #(swap! show-dropdown? not))
-        hide-dropdown   (mf/use-fn #(reset! show-dropdown? false))
-
-        select-mode
-        (mf/use-callback
-         (fn [mode]
-           (st/emit! (dv/set-interactions-mode mode))))]
-
-    [:div.view-options {:on-click toggle-dropdown}
-     [:span.label (tr "viewer.header.interactions")]
-     [:span.icon i/arrow-down]
-     [:& dropdown {:show @show-dropdown?
-                   :on-close hide-dropdown}
-      [:ul.dropdown.with-check
-       [:li {:class (dom/classnames :selected (= imode :hide))
-             :on-click #(select-mode :hide)}
-        [:span.icon i/tick]
-        [:span.label (tr "viewer.header.dont-show-interactions")]]
-
-       [:li {:class (dom/classnames :selected (= imode :show))
-             :on-click #(select-mode :show)}
-        [:span.icon i/tick]
-        [:span.label (tr "viewer.header.show-interactions")]]
-
-       [:li {:class (dom/classnames :selected (= imode :show-on-click))
-             :on-click #(select-mode :show-on-click)}
-        [:span.icon i/tick]
-        [:span.label (tr "viewer.header.show-interactions-on-click")]]]]]))
-
 (mf/defc header-options
-  [{:keys [section local]}]
+  [{:keys [section zoom]}]
   (let [fullscreen (mf/use-ctx fs/fullscreen-context)
 
         has-permission? true
@@ -123,12 +42,13 @@
 
     [:div.options-zone
      (case section
-       :interactions [:& interactions-menu {:local local}]
+       :interactions [:& interactions-menu]
        :comments [:& comments-menu]
-       nil)
+
+       [:div.view-options])
 
      [:& zoom-widget
-      {:zoom (:zoom local)
+      {:zoom zoom
        :on-increase (st/emitf dv/increase-zoom)
        :on-decrease (st/emitf dv/decrease-zoom)
        :on-zoom-to-50 (st/emitf dv/zoom-to-50)
@@ -150,8 +70,9 @@
        [:span.btn-text-dark (tr "labels.edit-file")])]))
 
 (mf/defc header-sitemap
-  [{:keys [project file page frame] :as props}]
-  (let [project-name (:name project)
+  [{:keys [data page frame] :as props}]
+  (let [project-name (get-in data [:project :name])
+        file-name    (get-in data [:file :name])
         page-name    (:name page)
         frame-name   (:name frame)
 
@@ -171,7 +92,7 @@
        {:on-click #(swap! show-dropdown? not)}
        [:span.project-name project-name]
        [:span "/"]
-       [:span.file-name (:name file)]
+       [:span.file-name file-name]
        [:span "/"]
        [:span.page-name page-name]
        [:span.icon i/arrow-down]
@@ -179,10 +100,10 @@
        [:& dropdown {:show @show-dropdown?
                      :on-close #(swap! show-dropdown? not)}
         [:ul.dropdown
-         (for [id (get-in file [:data :pages])]
+         (for [id (:pages data)]
            [:li {:id (str id)
                  :on-click (partial navigate-to id)}
-            (get-in file [:data :pages-index id :name])])]]]
+            (get-in data [:pages-index id :name])])]]]
 
       [:div.current-frame
        {:on-click toggle-thumbnails}
@@ -191,17 +112,16 @@
        [:span.icon i/arrow-down]]]))
 
 (mf/defc header
-  [{:keys [project file frames page local section index]}]
+  [{:keys [data frame page zoom section]}]
 
-  (let [;; TODO
+  (let [
+
+        ;; TODO
         ;; profile    (mf/deref refs/profile)
         ;; teams      (mf/deref refs/teams)
         ;; team-id    (get-in data [:project :team-id])
         ;; has-permission? (and (not= uuid/zero (:id profile))
         ;;                      (contains? teams team-id))
-
-
-        frame (get frames index)
 
         has-permission? true
 
@@ -221,10 +141,7 @@
            ;; If the user doesn't have permission we disable the link
            :style {:pointer-events (when-not has-permission? "none")}} i/logo-icon]]
 
-     [:> header-sitemap {:project project
-                         :file file
-                         :page page
-                         :frame frame}]
+     [:& header-sitemap {:data data :page page :frame frame}]
 
      [:div.mode-zone
       [:button.mode-zone-button.tooltip.tooltip-bottom
@@ -246,6 +163,5 @@
         :alt "Code mode"}
        i/code]]
 
-     [:> header-options {:section section
-                         :local local}]]))
+     [:& header-options {:section section :zoom zoom}]]))
 

@@ -21,43 +21,12 @@
 (def select-guide-width 1)
 (def select-guide-dasharray 5)
 
-;; ------------------------------------------------
-;; LENSES
-;; ------------------------------------------------
-
-(defn make-selected-shapes-iref
-  "Creates a lens to the current selected shapes"
-  []
-  (let [selected->shapes
-        (fn [state]
-          (let [selected (get-in state [:viewer-local :selected])
-                objects  (get-in state [:viewer-data :objects])
-                resolve-shape #(get objects %)]
-            (->> selected (map resolve-shape) (filterv (comp not nil?)))))]
-    #(l/derived selected->shapes st/state)))
-
-
-(defn make-hover-shapes-iref
-  "Creates a lens to the shapes the user is making hover"
-  []
-  (let [hover->shapes
-        (fn [state]
-          (let [hover   (get-in state [:viewer-local :hover])
-                objects (get-in state [:viewer-data :objects])]
-            (get objects hover)))]
-    #(l/derived hover->shapes st/state)))
-
-
-(defn- resolve-shapes
+(defn resolve-shapes
   [objects ids]
   (let [resolve-shape #(get objects %)]
     (into [] (comp (map resolve-shape)
                    (filter some?))
           ids)))
-
-
-(def selected-zoom
-  (l/derived (l/in [:viewer-local :zoom]) st/state))
 
 ;; ------------------------------------------------
 ;; HELPERS
@@ -88,20 +57,14 @@
 (mf/defc selection-feedback
   [{:keys [frame local objects]}]
   (let [{:keys [hover selected zoom]} local
-
-        ;; hover-shapes-ref (mf/use-memo (make-hover-shapes-iref))
-        ;; hover-shape (-> (or (mf/deref hover-shapes-ref) frame)
-        ;;                 (gsh/translate-to-frame frame))
-
-        ;; selected-shapes-ref (mf/use-memo (make-selected-shapes-iref))
-        ;; selected-shapes (->> (mf/deref selected-shapes-ref)
-        ;;                      (map #(gsh/translate-to-frame % frame)))
-
-        hover-shape     (or (first (resolve-shapes objects [hover])) frame)
-        selected-shapes (resolve-shapes objects selected)
+        hover-shape     (-> (or (first (resolve-shapes objects [hover])) frame)
+                            (gsh/translate-to-frame frame))
+        selected-shapes (->> (resolve-shapes objects selected)
+                             (map #(gsh/translate-to-frame % frame)))
 
         selrect         (gsh/selection-rect selected-shapes)
         bounds          (frame->bounds frame)]
+
 
     (when (seq selected-shapes)
       [:g.selection-feedback {:pointer-events "none"}

@@ -34,7 +34,6 @@
 (defn handle-hover-shape
   [{:keys [type id]} hover?]
   (fn [event]
-    (prn "handle-hover-shape")
     (when-not (#{:group :frame} type)
       (dom/prevent-default event)
       (dom/stop-propagation event)
@@ -62,8 +61,6 @@
           frame  (unchecked-get props "frame")
           render-wrapper? (or (not= :svg-raw (:type shape))
                               (svg-raw/graphic-element? (get-in shape [:content :tag])))]
-
-      (prn "KAKAKAK" render-wrapper?)
 
       (if render-wrapper?
         [:> shape-container {:shape shape

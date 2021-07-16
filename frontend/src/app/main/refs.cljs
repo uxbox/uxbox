@@ -293,7 +293,7 @@
   (l/derived :viewer-file st/state))
 
 (def viewer-data
-  (l/derived :viewer-data st/state))
+  (l/derived :viewer st/state))
 
 (def viewer-state
   (l/derived :viewer st/state))
