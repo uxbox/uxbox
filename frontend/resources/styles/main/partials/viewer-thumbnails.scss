@@ -1,4 +1,3 @@
-
 .viewer-thumbnails {
   grid-row: 1 / span 1;
   grid-column:  1 / span 1;
@@ -8,6 +7,11 @@
   display: flex;
   flex-direction: column;
   z-index: 12;
+
+  &.invisible {
+    visibility: hidden;
+    pointer-events: none;
+  }
 
   &.expanded {
     grid-row: 1 / span 2;
@@ -159,7 +163,7 @@
 
     &:hover {
       border-color: $color-primary;
-      border-width: 2px;
+      outline: 2px solid $color-primary;
     }
   }
 

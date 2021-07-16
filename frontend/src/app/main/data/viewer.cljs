@@ -14,6 +14,7 @@
    [app.main.data.comments :as dcm]
    [app.main.data.fonts :as df]
    [app.main.repo :as rp]
+   [app.util.globals :as ug]
    [app.util.router :as rt]
    [beicon.core :as rx]
    [cljs.spec.alpha :as s]
@@ -76,7 +77,13 @@
     ptk/WatchEvent
     (watch [_ state _]
       (rx/of (fetch-bundle params)
-             (fetch-comment-threads params)))))
+             (fetch-comment-threads params)))
+
+    ptk/EffectEvent
+    (effect [_ _ _]
+      (let [name (str "viewer-" file-id)]
+        (unchecked-set ug/global "name" name)))))
+
 
 (defn finalize
   [params]
@@ -405,13 +412,13 @@
 ;; --- NAV
 
 (defn go-to-dashboard
-  ([] (go-to-dashboard nil))
-  ([{:keys [team-id]}]
-   (ptk/reify ::go-to-dashboard
-     ptk/WatchEvent
-     (watch [_ state _]
-       (let [team-id (or team-id (get-in state [:viewer-data :project :team-id]))]
-         (rx/of (rt/nav :dashboard-projects {:team-id team-id})))))))
+  []
+  (ptk/reify ::go-to-dashboard
+    ptk/WatchEvent
+    (watch [_ state _]
+      (let [team-id (get-in state [:viewer :project :team-id])
+            params  {:team-id team-id}]
+        (rx/of (rt/nav :dashboard-projects params))))))
 
 (defn go-to-page
   [page-id]
@@ -423,3 +430,16 @@
              pparams (assoc (:path-params route) :page-id page-id)
              rname   (get-in route [:data :name])]
          (rx/of (rt/nav rname pparams qparams))))))
+
+(defn go-to-workspace
+  [page-id]
+  (ptk/reify ::go-to-workspace
+    ptk/WatchEvent
+    (watch [_ state _]
+      (let [project-id (get-in state [:viewer :project :id])
+            file-id    (get-in state [:viewer :file :id])
+            pparams {:project-id project-id :file-id file-id}
+            qparams {:page-id page-id}]
+         (rx/of (rt/nav-new-window :workspace pparams qparams))))))
+
+

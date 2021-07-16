@@ -88,10 +88,10 @@
                  :section section}]
 
      [:div.viewer-content
-      (when (:show-thumbnails local)
-        [:& thumbnails-panel {:frames frames
-                              :page page
-                              :index index}])
+      [:& thumbnails-panel {:frames frames
+                            :show? (:show-thumbnails local false)
+                            :page page
+                            :index index}]
       [:section.viewer-preview
        (cond
          (empty? frames)

@@ -29,16 +29,23 @@
    [rumext.alpha :as mf]))
 
 (mf/defc header-options
-  [{:keys [section zoom]}]
+  [{:keys [section zoom page]}]
   (let [fullscreen (mf/use-ctx fs/fullscreen-context)
 
         has-permission? true
 
         toggle-fullscreen
         (mf/use-callback
-          (mf/deps fullscreen)
-          (fn []
-            (if @fullscreen (fullscreen false) (fullscreen true))))]
+         (mf/deps fullscreen)
+         (fn []
+           (if @fullscreen (fullscreen false) (fullscreen true))))
+
+        go-to-workspace
+        (mf/use-callback
+         (mf/deps page)
+         (fn []
+           (st/emit! (dv/go-to-workspace (:id page)))))]
+
 
     [:div.options-zone
      (case section
@@ -67,7 +74,7 @@
        [:span.btn-primary (tr "labels.share-prototype")])
 
      (when has-permission?
-       [:span.btn-text-dark (tr "labels.edit-file")])]))
+       [:span.btn-text-dark {:on-click go-to-workspace} (tr "labels.edit-file")])]))
 
 (mf/defc header-sitemap
   [{:keys [project file page frame] :as props}]
@@ -77,7 +84,8 @@
         frame-name   (:name frame)
 
         toggle-thumbnails
-        (st/emitf dv/toggle-thumbnails-panel)
+        (fn []
+          (st/emit! dv/toggle-thumbnails-panel))
 
         show-dropdown? (mf/use-state false)
 
@@ -113,9 +121,7 @@
 
 (mf/defc header
   [{:keys [project file page frame zoom section]}]
-
   (let [
-
         ;; TODO
         ;; profile    (mf/deref refs/profile)
         ;; teams      (mf/deref refs/teams)
@@ -124,9 +130,6 @@
         ;;                      (contains? teams team-id))
 
         has-permission? true
-
-        toggle-thumbnails
-        (st/emitf dv/toggle-thumbnails-panel)
 
         go-to-dashboard
         (st/emitf (dv/go-to-dashboard))
@@ -163,5 +166,7 @@
         :alt "Code mode"}
        i/code]]
 
-     [:& header-options {:section section :zoom zoom}]]))
+     [:& header-options {:section section
+                         :page page
+                         :zoom zoom}]]))
 

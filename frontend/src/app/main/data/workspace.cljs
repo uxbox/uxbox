@@ -20,6 +20,7 @@
    [app.common.transit :as t]
    [app.common.uuid :as uuid]
    [app.config :as cfg]
+   [app.util.globals :as ug]
    [app.main.data.messages :as dm]
    [app.main.data.workspace.changes :as dch]
    [app.main.data.workspace.common :as dwc]
@@ -171,7 +172,12 @@
                           (->> stream
                                (rx/filter #(= ::dwc/index-initialized %))
                                (rx/first)
-                               (rx/map #(file-initialized bundle)))))))))))
+                               (rx/map #(file-initialized bundle)))))))))
+
+    ptk/EffectEvent
+    (effect [_ _ _]
+      (let [name (str "workspace-" file-id)]
+        (unchecked-set ug/global "name" name)))))
 
 (defn- file-initialized
   [{:keys [file users project libraries] :as bundle}]
