@@ -14,19 +14,23 @@
    [app.util.timers :as timers]
    [rumext.alpha :as mf]))
 
-(mf/defc editable-select [{:keys [value type options class on-change placeholder]}]
+(mf/defc editable-select [{:keys [value type options class on-change placeholder on-blur]}]
   (let [state (mf/use-state {:id (uuid/next)
                              :is-open? false
                              :current-value value
                              :top nil
                              :left nil
                              :bottom nil})
+
+        emit-blur? (mf/use-ref nil)
+
         open-dropdown #(swap! state assoc :is-open? true)
         close-dropdown #(swap! state assoc :is-open? false)
         select-item (fn [value]
                       (fn [_]
                         (swap! state assoc :current-value value)
-                        (when on-change (on-change value))))
+                        (when on-change (on-change value))
+                        (when on-blur (on-blur))))
 
         as-key-value (fn [item] (if (map? item) [(:value item) (:label item)] [item item]))
 
@@ -55,21 +59,38 @@
                          assoc
                          :left left
                          :top top
-                         :bottom bottom))))))]
+                         :bottom bottom))))))
+
+        handle-focus
+        (mf/use-callback
+         (fn []
+           (mf/set-ref-val! emit-blur? false)))
+
+        handle-blur
+        (mf/use-callback
+         (fn []
+           (mf/set-ref-val! emit-blur? true)
+           (timers/schedule
+            200
+            (fn []
+              (when (and on-blur (mf/ref-val emit-blur?)) (on-blur))))))]
 
     (mf/use-effect
-     (mf/deps value)
-     #(reset! state {:current-value value}))
+     (mf/deps value (:current-value @state))
+     #(when (not= value (:current-value @state))
+        (reset! state {:current-value value})))
 
     (mf/use-effect
-     (mf/deps options)
-     #(reset! state {:is-open? false
-                     :current-value value}))
+     (mf/deps (:is-open? @state))
+     (fn []
+       (mf/set-ref-val! emit-blur? (not (:is-open? @state)))))
 
     [:div.editable-select {:class class
                            :ref on-node-load}
      [:input.input-text {:value (or (-> @state :current-value value->label) "")
                          :on-change handle-change-input
+                         :on-focus handle-focus
+                         :on-blur handle-blur
                          :placeholder placeholder
                          :type type}]
      [:span.dropdown-button {:on-click open-dropdown} i/arrow-down]

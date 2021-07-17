@@ -20,6 +20,7 @@
    [app.main.ui.workspace.sidebar.options.menus.typography :refer [typography-entry typography-options]]
    [app.util.dom :as dom]
    [app.util.i18n :as i18n :refer [tr]]
+   [app.util.timers :as tm]
    [cuerdas.core :as str]
    [rumext.alpha :as mf]))
 
@@ -80,11 +81,12 @@
 (def attrs (d/concat #{} shape-attrs root-attrs paragraph-attrs text-attrs))
 
 (mf/defc text-align-options
-  [{:keys [values on-change] :as props}]
+  [{:keys [values on-change on-blur] :as props}]
   (let [{:keys [text-align]} values
         handle-change
         (fn [_ new-align]
-          (on-change {:text-align new-align}))]
+          (on-change {:text-align new-align})
+          (when (some? on-blur) (on-blur)))]
 
     ;; --- Align
     [:div.align-icons
@@ -110,10 +112,12 @@
       i/text-align-justify]]))
 
 (mf/defc text-direction-options
-  [{:keys [values on-change] :as props}]
+  [{:keys [values on-change on-blur] :as props}]
   (let [direction     (:text-direction values)
-        handle-change (fn [_ val]
-                        (on-change {:text-direction val}))]
+        handle-change
+        (fn [_ val]
+          (on-change {:text-direction val})
+          (when (some? on-blur) (on-blur)))]
     ;; --- Align
     [:div.align-icons
      [:span.tooltip.tooltip-bottom-left
@@ -128,12 +132,13 @@
       i/text-direction-rtl]]))
 
 (mf/defc vertical-align
-  [{:keys [values on-change] :as props}]
+  [{:keys [values on-change on-blur] :as props}]
   (let [{:keys [vertical-align]} values
         vertical-align (or vertical-align "top")
         handle-change
         (fn [_ new-align]
-          (on-change {:vertical-align new-align}))]
+          (on-change {:vertical-align new-align})
+          (when (some? on-blur) (on-blur)))]
 
     [:div.align-icons
      [:span.tooltip.tooltip-bottom-left
@@ -153,11 +158,12 @@
       i/align-bottom]]))
 
 (mf/defc grow-options
-  [{:keys [ids values] :as props}]
+  [{:keys [ids values on-blur] :as props}]
   (let [grow-type (:grow-type values)
         handle-change-grow
         (fn [_ grow-type]
-          (st/emit! (dch/update-shapes ids #(assoc % :grow-type grow-type))))]
+          (st/emit! (dch/update-shapes ids #(assoc % :grow-type grow-type)))
+          (when (some? on-blur) (on-blur)))]
 
     [:div.align-icons
      [:span.tooltip.tooltip-bottom
@@ -177,11 +183,12 @@
       i/auto-height]]))
 
 (mf/defc text-decoration-options
-  [{:keys [values on-change] :as props}]
+  [{:keys [values on-change on-blur] :as props}]
   (let [text-decoration (or (:text-decoration values) "none")
         handle-change
         (fn [_ type]
-          (on-change {:text-decoration type}))]
+          (on-change {:text-decoration type})
+          (when (some? on-blur) (on-blur)))]
     [:div.align-icons
      [:span.tooltip.tooltip-bottom
       {:alt (tr "workspace.options.text-options.none")
@@ -220,7 +227,11 @@
 
         emit-update!
         (mf/use-callback
+         (mf/deps values)
          (fn [id attrs]
+           (st/emit! (dwt/save-font (-> (merge txt/default-text-attrs values attrs)
+                                        (select-keys text-attrs))))
+
            (let [attrs (select-keys attrs root-attrs)]
              (when-not (empty? attrs)
                (st/emit! (dwt/update-root-attrs {:id id :attrs attrs}))))
@@ -235,7 +246,7 @@
 
         on-change
         (mf/use-callback
-         (mf/deps ids)
+         (mf/deps ids emit-update!)
          (fn [attrs]
            (run! #(emit-update! % attrs) ids)))
 
@@ -287,7 +298,15 @@
 
         opts #js {:ids ids
                   :values values
-                  :on-change on-change}]
+                  :on-change on-change
+                  :on-blur
+                  (fn []
+                    (tm/schedule
+                     100
+                     (fn []
+                       (when (not= "INPUT" (-> (dom/get-active) (dom/get-tag-name)))
+                         (let [node (dom/get-element-by-class "public-DraftEditor-content")]
+                           (dom/focus! node))))))}]
 
     [:div.element-set
      [:div.element-set-title

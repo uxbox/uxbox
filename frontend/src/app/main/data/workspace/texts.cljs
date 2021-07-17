@@ -75,11 +75,14 @@
   (ptk/reify ::initialize-editor-state
     ptk/UpdateEvent
     (update [_ state]
-      (update-in state [:workspace-editor-state id]
-                 (fn [_]
-                   (ted/create-editor-state
-                    (some->> content ted/import-content)
-                    decorator))))
+      (let [text-state (some->> content ted/import-content)
+            attrs (get-in state [:workspace-local :defaults :font])
+
+            editor (cond-> (ted/create-editor-state text-state decorator)
+                     (and (nil? content) (some? attrs))
+                     (ted/update-editor-current-block-data attrs))]
+        (-> state
+            (assoc-in [:workspace-editor-state id] editor))))
 
     ptk/WatchEvent
     (watch [_ _ stream]
@@ -100,6 +103,13 @@
     ptk/UpdateEvent
     (update [_ state]
       (d/update-in-when state [:workspace-editor-state id] ted/editor-select-all))))
+
+(defn cursor-to-end
+  [{:keys [id] :as shape}]
+  (ptk/reify ::cursor-to-end
+    ptk/UpdateEvent
+    (update [_ state]
+      (d/update-in-when state [:workspace-editor-state id] ted/cursor-to-end))))
 
 ;; --- Helpers
 
@@ -193,8 +203,11 @@
       (when-not (some? (get-in state [:workspace-editor-state id]))
         (let [objects   (wsh/lookup-page-objects state)
               shape     (get objects id)
+              update-node? (fn [node]
+                             (or (txt/is-text-node? node)
+                                 (txt/is-paragraph-node? node)))
 
-              update-fn #(update-shape % txt/is-text-node? attrs/merge attrs)
+              update-fn #(update-shape % update-node? attrs/merge attrs)
               shape-ids (cond (= (:type shape) :text)  [id]
                               (= (:type shape) :group) (cp/get-children id objects))]
           (rx/of (dch/update-shapes shape-ids update-fn)))))))
@@ -309,3 +322,14 @@
                 (rx/race resize-batch change-page)
                 (rx/of #(dissoc % ::handling-texts))))
           (rx/empty))))))
+
+(defn save-font
+  [data]
+  (ptk/reify ::save-font
+    ptk/UpdateEvent
+    (update [_ state]
+      (let [multiple? (->> data vals (d/seek #(= % :multiple)))]
+        (cond-> state
+          (not multiple?)
+          (assoc-in [:workspace-local :defaults :font] data))))))
+

@@ -70,8 +70,11 @@
 
 (defn get-editor-current-inline-styles
   [state]
-  (-> (.getCurrentInlineStyle ^js state)
-      (txt/styles-to-attrs)))
+  (if (impl/isCurrentEmpty state)
+    (let [block (impl/getCurrentBlock state)]
+      (get-editor-block-data block))
+    (-> (.getCurrentInlineStyle ^js state)
+        (txt/styles-to-attrs))))
 
 (defn update-editor-current-block-data
   [state attrs]
@@ -79,7 +82,18 @@
 
 (defn update-editor-current-inline-styles
   [state attrs]
-  (impl/applyInlineStyle state (txt/attrs-to-styles attrs)))
+  (let [update-blocks
+        (fn [state block-key]
+          (if (empty? (impl/getBlockContent state block-key))
+            (impl/updateBlockData state block-key (clj->js attrs))
+
+            (let [attrs (-> (impl/getInlineStyle state block-key 0)
+                            (txt/styles-to-attrs))]
+              (impl/updateBlockData state block-key (clj->js attrs)))))
+
+        state (impl/applyInlineStyle state (txt/attrs-to-styles attrs))
+        selected (impl/getSelectedBlocks state)]
+    (reduce update-blocks state selected)))
 
 (defn editor-split-block
   [state]
@@ -92,3 +106,23 @@
 (defn remove-editor-blur-selection
   [state]
   (impl/removeBlurSelectionEntity state))
+
+(defn cursor-to-end
+  [state]
+  (impl/cursorToEnd state))
+
+(defn apply-block-styles-to-content
+  [state blocks]
+  (if (empty? blocks)
+    state
+    (let [selection (impl/getSelection state)
+          redfn
+          (fn [state bkey]
+            (let [attrs (-> (impl/getBlockData state bkey)
+                            (js->clj :keywordize-keys true))]
+              (-> state
+                  (impl/selectBlock bkey)
+                  (impl/applyInlineStyle (txt/attrs-to-styles attrs)))))]
+      (as-> state $
+        (reduce redfn $ blocks)
+        (impl/setSelection $ selection)))))

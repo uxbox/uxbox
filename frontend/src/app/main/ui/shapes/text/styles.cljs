@@ -47,8 +47,8 @@
         text-align  (:text-align data "start")
         grow-type   (:grow-type shape)
 
-        base        #js {:fontSize (str (:font-size txt/default-text-attrs) "px")
-                         :lineHeight (:line-height txt/default-text-attrs)
+        base        #js {:fontSize (str (:font-size data (:font-size txt/default-text-attrs)) "px")
+                         :lineHeight (:line-height data (:line-height txt/default-text-attrs))
                          :margin "inherit"}]
     (cond-> base
       (some? line-height)       (obj/set! "lineHeight" line-height)

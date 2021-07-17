@@ -207,7 +207,16 @@
               :workspace-file
               :workspace-project
               :workspace-media-objects
-              :workspace-persistence))
+              :workspace-persistence
+              :workspace-local
+              :workspace-data
+              :workspace-editor-state
+              :workspace-undo
+              :current-file-id
+              :current-project-id
+              :workspace-layout
+              :workspace-libraries
+              :workspace-presence))
 
     ptk/WatchEvent
     (watch [_ _ _]
@@ -242,9 +251,10 @@
     (update [_ state]
       (let [page-id (or page-id (get-in state [:workspace-data :pages 0]))
             local   (-> (:workspace-local state)
-                        (dissoc :edition)
-                        (dissoc :edit-path)
-                        (dissoc :selected))]
+                        (dissoc
+                         :edition
+                         :edit-path
+                         :selected))]
         (-> state
             (assoc-in [:workspace-cache page-id] local)
             (dissoc :current-page-id :workspace-local :trimmed-page :workspace-drawing))))))

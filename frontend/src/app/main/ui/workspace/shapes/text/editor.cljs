@@ -7,6 +7,7 @@
 (ns app.main.ui.workspace.shapes.text.editor
   (:require
    ["draft-js" :as draft]
+   [app.common.data :as d]
    [app.common.geom.shapes :as gsh]
    [app.common.text :as txt]
    [app.main.data.workspace :as dw]
@@ -32,7 +33,7 @@
   (let [bprops (obj/get props "blockProps")
         data   (obj/get bprops "data")
         style  (sts/generate-paragraph-styles (obj/get bprops "shape")
-                                                (obj/get bprops "data"))
+                                              (obj/get bprops "data"))
         dir    (:text-direction data "auto")]
 
 
@@ -56,11 +57,34 @@
                        :shape shape}}
       nil)))
 
+(defn styles-fn [styles content]
+  (if (= (.getText content) "")
+    (-> (.getData content)
+        (.toJS)
+        (js->clj :keywordize-keys true)
+        (sts/generate-text-styles))
+    (-> (txt/styles-to-attrs styles)
+        (sts/generate-text-styles))))
+
 (def default-decorator
   (ted/create-decorator "PENPOT_SELECTION" selection-component))
 
 (def empty-editor-state
   (ted/create-editor-state nil default-decorator))
+
+(defn get-content-changes
+  [old-state state]
+  (let [old-blocks (js->clj (.toJS (.getBlockMap (.getCurrentContent ^js old-state)))
+                            :keywordize-keys false)
+        new-blocks (js->clj (.toJS (.getBlockMap (.getCurrentContent ^js state)))
+                            :keywordize-keys false)]
+    (->> old-blocks
+         (d/mapm
+          (fn [bkey bstate]
+            {:old (get bstate "text")
+             :new (get-in new-blocks [bkey "text"])}))
+         (filter #(contains? new-blocks (first %)))
+         (into {}))))
 
 (mf/defc text-shape-edit-html
   {::mf/wrap [mf/memo]
@@ -106,10 +130,35 @@
          (fn [_]
            (reset! blured false)))
 
+        prev-value (mf/use-ref state)
+
+        ;; Effect that keeps updated the `prev-value` reference
+        _ (mf/use-effect
+           (mf/deps state)
+           #(mf/set-ref-val! prev-value state))
+
+        handle-change
+        (mf/use-callback
+         (fn [state]
+           (let [old-state (mf/ref-val prev-value)]
+             (if (and (some? state) (some? old-state))
+               (let [block-states (get-content-changes old-state state)
+
+                     block-to-add-styles
+                     (->> block-states
+                          (filter
+                           (fn [[_ v]]
+                             (and (not= (:old v) (:new v))
+                                  (= (:old v) ""))))
+                          (mapv first))]
+                 (ted/apply-block-styles-to-content state block-to-add-styles))
+               state))))
+
         on-change
         (mf/use-callback
          (fn [val]
-           (let [val (if (true? @blured)
+           (let [val (handle-change val)
+                 val (if (true? @blured)
                        (ted/add-editor-blur-selection val)
                        (ted/remove-editor-blur-selection val))]
              (st/emit! (dwt/update-editor-state shape val)))))
@@ -124,9 +173,17 @@
         handle-return
         (mf/use-callback
          (fn [_ state]
-           (st/emit! (dwt/update-editor-state shape (ted/editor-split-block state)))
+           (let [state (ted/editor-split-block state)
+                 state (handle-change state)]
+             (st/emit! (dwt/update-editor-state shape state)))
            "handled"))
-        ]
+
+        on-click
+        (mf/use-callback
+         (fn [event]
+           (when (dom/class? (dom/get-target event) "DraftEditor-root")
+             (st/emit! (dwt/cursor-to-end shape)))
+           (st/emit! (dwt/focus-editor))))]
 
     (mf/use-layout-effect on-mount)
 
@@ -135,7 +192,7 @@
       :style {:cursor cur/text
               :width (:width shape)
               :height (:height shape)}
-      :on-click (st/emitf (dwt/focus-editor))
+      :on-click on-click
       :class (dom/classnames
               :align-top    (= (:vertical-align content "top") "top")
               :align-center (= (:vertical-align content) "center")
@@ -146,9 +203,7 @@
        :on-focus on-focus
        :handle-return handle-return
        :strip-pasted-styles true
-       :custom-style-fn (fn [styles _]
-                          (-> (txt/styles-to-attrs styles)
-                              (sts/generate-text-styles)))
+       :custom-style-fn styles-fn
        :block-renderer-fn #(render-block % shape)
        :ref on-editor
        :editor-state state}]]))

@@ -64,7 +64,8 @@
 
 (defn ^boolean is-text-node?
   [node]
-  (string? (:text node)))
+  (and (string? (:text node))
+       (not= (:text node) "")))
 
 (defn ^boolean is-paragraph-node?
   [node]

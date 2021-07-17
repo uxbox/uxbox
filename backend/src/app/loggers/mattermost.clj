@@ -60,7 +60,7 @@
     (a/close! output)))
 
 (defn- send-mattermost-notification!
-  [cfg {:keys [host version id] :as cdata}]
+  [cfg {:keys [host id] :as cdata}]
   (try
     (let [uri  (:uri cfg)
           text (str "Unhandled exception (host: " host ", url: " (cfg/get :public-uri) "/dbg/error-by-id/" id "\n"

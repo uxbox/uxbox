@@ -258,7 +258,7 @@
 
 (defmethod migrate 11
   [data]
-  (letfn [(update-object [objects id shape]
+  (letfn [(update-object [objects _id shape]
             (if (= :frame (:type shape))
               (d/update-when shape :shapes (fn [shapes]
                                              (filterv (fn [id] (contains? objects id)) shapes)))
